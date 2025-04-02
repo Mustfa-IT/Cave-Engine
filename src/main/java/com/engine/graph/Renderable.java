@@ -1,4 +1,4 @@
-package com.graph;
+package com.engine.graph;
 
 import java.awt.Graphics2D;
 

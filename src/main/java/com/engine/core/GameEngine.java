@@ -1,6 +1,6 @@
-package com.core;
+package com.engine.core;
 
-import com.graph.Renderer;
+import com.engine.graph.Renderer;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;

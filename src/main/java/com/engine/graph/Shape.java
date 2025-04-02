@@ -1,9 +1,9 @@
 // Shape.java
-package com.graph;
+package com.engine.graph;
 
 import java.awt.Graphics2D;
 
-import com.components.Transform;
+import com.engine.components.Transform;
 
 import java.awt.Color;
 

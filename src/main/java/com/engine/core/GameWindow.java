@@ -1,16 +1,15 @@
-package com.core;
+package com.engine.core;
 
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.Callable;
 
 import javax.swing.JFrame;
-import javax.swing.JOptionPane;
 
 public class GameWindow extends JFrame {
   private int width, height;
   private String title;
-  private Callable onClose;
+  private Callable<Void> onClose;
 
   public GameWindow() {
     this.width = 400 * 2;

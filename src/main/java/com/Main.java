@@ -2,10 +2,10 @@ package com;
 
 import java.awt.Color;
 
-import com.components.RenderableComponent;
-import com.components.Transform;
-import com.core.GameEngine;
-import com.graph.Square;
+import com.engine.components.RenderableComponent;
+import com.engine.components.Transform;
+import com.engine.core.GameEngine;
+import com.engine.graph.Square;
 
 public class Main {
   public static void main(String[] args) {

@@ -1,5 +1,5 @@
 // Transform.java
-package com.components;
+package com.engine.components;
 
 /**
  * Encapsulates position, rotation (in radians) and scale.

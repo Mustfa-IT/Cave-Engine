@@ -1,12 +1,11 @@
-package com.graph;
+package com.engine.graph;
 
 import java.awt.Graphics2D;
 import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 
-import com.components.RenderableComponent;
-import com.components.Transform;
-import com.core.GameWindow;
+import com.engine.components.RenderableComponent;
+import com.engine.core.GameWindow;
 
 import dev.dominion.ecs.api.Dominion;;
 
@@ -33,7 +32,7 @@ public class Renderer {
     Graphics2D g = (Graphics2D) bs.getDrawGraphics();
     // Clear the screen
     g.clearRect(0, 0, window.getWidth(), window.getHeight());
-    // Render each object
+    // Render each object of the world
     world.findEntitiesWith( RenderableComponent.class).stream().forEach(result -> {
       RenderableComponent r = result.comp();
       r.render(g);

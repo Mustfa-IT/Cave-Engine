@@ -1,8 +1,8 @@
-package com.components;
+package com.engine.components;
 
 import java.awt.Graphics2D;
 
-import com.graph.Renderable;
+import com.engine.graph.Renderable;
 
 public class RenderableComponent {
   private Renderable r;
