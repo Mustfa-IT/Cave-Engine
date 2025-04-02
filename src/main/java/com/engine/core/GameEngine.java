@@ -2,8 +2,11 @@ package com.engine.core;
 
 import org.jbox2d.common.Vec2;
 
+import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
 import com.engine.pyhsics.PhysicsWorld;
+import com.engine.scene.Scene;
+import com.engine.scene.SceneManager;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;
@@ -13,14 +16,14 @@ public class GameEngine {
   private boolean running;
   public Dominion ecs;
   private RenderSystem renderer;
-  private PhysicsWorld physicsWorld; // Fixed typo from 'pyhsic'
-  // In Box2D, Y-up is positive, so we need a negative gravity for downward force
-  private Vec2 defaultGravity = new Vec2(1, 9.8f);
-  // flag to check if the game engine was closed by the window in a normal way
-  // if the game engine close and this is false then the game engine was
-  // Interrupted either by Ctrl + C or something else
+  private PhysicsWorld physicsWorld;
+  private Vec2 defaultGravity = new Vec2(0, 9.8f);
   private boolean closedByWindow;
   private Scheduler scheduler;
+
+  // Integrated components
+  private EntityFactory entityFactory;
+  private SceneManager sceneManager;
 
   public GameEngine() {
     this.window = new GameWindow("Physics Game");
@@ -31,17 +34,61 @@ public class GameEngine {
     });
     this.addShutdownHook(new Thread(this::stop));
     init();
-    // Debugging: Log entity creation
     System.out.println("GameEngine initialized. Dominion world created.");
   }
 
   private void init() {
+    // Core systems initialization
     this.ecs = Dominion.create();
     this.physicsWorld = new PhysicsWorld(defaultGravity, ecs);
     this.renderer = new RenderSystem(window, ecs);
+
+    // Create entity factory
+    this.entityFactory = new EntityFactory(ecs, physicsWorld);
+
+    // Create scene manager with reference to this engine
+    this.sceneManager = new SceneManager(this);
+
+    // Setup the main loop scheduler
     this.scheduler = ecs.createScheduler();
+    this.scheduler.schedule(this::update);
     this.scheduler.schedule(() -> renderer.render());
-    this.scheduler.schedule(() -> this.physicsWorld.update(this.scheduler.deltaTime()));
+  }
+
+  /**
+   * Main engine update method, calls physics and scene updates
+   */
+  private void update() {
+    double deltaTime = this.scheduler.deltaTime();
+
+    // Update physics
+    this.physicsWorld.update(deltaTime);
+
+    // Update current scene
+    if (sceneManager.getCurrentScene() != null) {
+      sceneManager.update(deltaTime);
+    }
+  }
+
+  /**
+   * Register a scene with the engine
+   */
+  public void registerScene(String name, Scene scene) {
+    sceneManager.registerScene(name, scene);
+  }
+
+  /**
+   * Set the active scene by name
+   */
+  public void setActiveScene(String sceneName) {
+    sceneManager.setActiveScene(sceneName);
+  }
+
+  /**
+   * Initialize all scenes
+   */
+  public void initializeScenes() {
+    sceneManager.initializeAllScenes();
   }
 
   public void start() {
@@ -53,7 +100,6 @@ public class GameEngine {
   }
 
   public void stop() {
-
     if (closedByWindow)
       return;
     running = false;
@@ -95,6 +141,14 @@ public class GameEngine {
 
   public void setRenderer(RenderSystem renderer) {
     this.renderer = renderer;
+  }
+
+  public EntityFactory getEntityFactory() {
+    return entityFactory;
+  }
+
+  public SceneManager getSceneManager() {
+    return sceneManager;
   }
 
   public PhysicsWorld getPhysicsWorld() {

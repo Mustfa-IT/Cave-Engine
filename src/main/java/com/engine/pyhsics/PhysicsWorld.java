@@ -13,23 +13,23 @@ import dev.dominion.ecs.api.Results.With2;
 public class PhysicsWorld extends World {
   private final Dominion ecs;
   private final float pixelsPerMeter = 30.0f; // Conversion factor between pixels and meters
-  private final int velocityIterations = 10; // Increased from 8
-  private final int positionIterations = 8; // Increased from 3
+  private final int velocityIterations = 10;
+  private final int positionIterations = 8;
   private float accumulator = 0.0f;
   private final float timeStep = 1.0f / 60.0f; // Fixed time step for physics
 
   // Debug flag to monitor position changes
   private boolean debugPositions = true;
-
-  // Whether we're in a Y-up (physics) or Y-down (screen) coordinate system
-  private final boolean isYFlipped = true; // Box2D uses Y-up while screen is Y-down
-
+  
   public PhysicsWorld(Vec2 gravity, Dominion ecs) {
     super(gravity);
     this.ecs = ecs;
     initializePhysicsBodies();
   }
 
+  /**
+   * Updates physics bodies for all entities that have physics components
+   */
   private void initializePhysicsBodies() {
     // Find all entities with PhysicsBodyComponent but no Body yet
     ecs.findEntitiesWith(PhysicsBodyComponent.class).stream()
@@ -46,6 +46,9 @@ public class PhysicsWorld extends World {
         });
   }
 
+  /**
+   * Steps the physics simulation and updates entity transforms
+   */
   public void update(double deltaTime) {
     // Use fixed time steps with accumulator for stable physics
     accumulator += (float) deltaTime;
