@@ -9,11 +9,11 @@ import com.engine.core.GameWindow;
 
 import dev.dominion.ecs.api.Dominion;;
 
-public class Renderer {
+public class RenderSystem {
   private final GameWindow window;
   private final Dominion world;
 
-  public Renderer(GameWindow window, Dominion world) {
+  public RenderSystem(GameWindow window, Dominion world) {
     this.window = window;
     this.world = world;
     // Ensure the window is visible before creating the BufferStrategy

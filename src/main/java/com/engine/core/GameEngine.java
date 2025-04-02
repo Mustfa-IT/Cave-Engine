@@ -1,6 +1,9 @@
 package com.engine.core;
 
-import com.engine.graph.Renderer;
+import org.jbox2d.common.Vec2;
+
+import com.engine.graph.RenderSystem;
+import com.engine.pyhsics.PhysicsWorld;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;
@@ -8,8 +11,11 @@ import dev.dominion.ecs.api.Scheduler;
 public class GameEngine {
   private GameWindow window;
   private boolean running;
-  public Dominion world;
-  private Renderer renderer;
+  public Dominion ecs;
+  private RenderSystem renderer;
+  private PhysicsWorld physicsWorld; // Fixed typo from 'pyhsic'
+  // In Box2D, Y-up is positive, so we need a negative gravity for downward force
+  private Vec2 defaultGravity = new Vec2(1, 9.8f);
   // flag to check if the game engine was closed by the window in a normal way
   // if the game engine close and this is false then the game engine was
   // Interrupted either by Ctrl + C or something else
@@ -17,20 +23,25 @@ public class GameEngine {
   private Scheduler scheduler;
 
   public GameEngine() {
-    this.window = new GameWindow("My Game");
+    this.window = new GameWindow("Physics Game");
     this.window.setOnClose(() -> {
       stop();
       this.closedByWindow = true;
       return null;
     });
     this.addShutdownHook(new Thread(this::stop));
-    this.world = Dominion.create();
-    this.renderer = new Renderer(window, world);
-    // Create a scheduler and schedule the render system
-    this.scheduler = world.createScheduler();
-    this.scheduler.schedule(() -> renderer.render()); // Add render system
+    init();
     // Debugging: Log entity creation
     System.out.println("GameEngine initialized. Dominion world created.");
+  }
+
+  private void init() {
+    this.ecs = Dominion.create();
+    this.physicsWorld = new PhysicsWorld(defaultGravity, ecs);
+    this.renderer = new RenderSystem(window, ecs);
+    this.scheduler = ecs.createScheduler();
+    this.scheduler.schedule(() -> renderer.render());
+    this.scheduler.schedule(() -> this.physicsWorld.update(this.scheduler.deltaTime()));
   }
 
   public void start() {
@@ -70,19 +81,23 @@ public class GameEngine {
     this.running = running;
   }
 
-  public Dominion getWorld() {
-    return world;
+  public Dominion getEcs() {
+    return ecs;
   }
 
-  public void setWorld(Dominion world) {
-    this.world = world;
+  public void setEcs(Dominion world) {
+    this.ecs = world;
   }
 
-  public Renderer getRenderer() {
+  public RenderSystem getRenderer() {
     return renderer;
   }
 
-  public void setRenderer(Renderer renderer) {
+  public void setRenderer(RenderSystem renderer) {
     this.renderer = renderer;
+  }
+
+  public PhysicsWorld getPhysicsWorld() {
+    return physicsWorld;
   }
 }
