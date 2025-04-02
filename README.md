@@ -18,7 +18,7 @@ This project is a simple 2D physics engine built in Java. It uses a component-ba
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Mustfa-IT/java2dphysics.git
    cd java2dphysics
    ```
 
