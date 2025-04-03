@@ -1,10 +1,11 @@
-package com.engine.pyhsics;
+package com.engine.physics;
 
 import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.collision.shapes.PolygonShape;
 
+import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.Transform;
 
 import dev.dominion.ecs.api.Dominion;
@@ -20,7 +21,7 @@ public class PhysicsWorld extends World {
 
   // Debug flag to monitor position changes
   private boolean debugPositions = true;
-  
+
   public PhysicsWorld(Vec2 gravity, Dominion ecs) {
     super(gravity);
     this.ecs = ecs;
@@ -36,11 +37,10 @@ public class PhysicsWorld extends World {
         .forEach(result -> {
           PhysicsBodyComponent physics = result.comp();
           if (physics.getBody() == null) {
-            // Create the body in the physics world
+            // No try/catch for potential errors
             Body body = createBody(physics.getBodyDef());
             body.createFixture(physics.getFixtureDef());
             physics.setBody(body);
-            // Store the entity ID in the body's user data
             body.setUserData(result.entity());
           }
         });
@@ -115,5 +115,16 @@ public class PhysicsWorld extends World {
   // Helper method to correctly set a box shape in the physics world
   public void setBoxShape(PolygonShape shape, float halfWidth, float halfHeight) {
     shape.setAsBox(toPhysicsWorld(halfWidth), toPhysicsWorld(halfHeight));
+  }
+
+  /**
+   * Removes a body from the physics world
+   *
+   * @param body The body to remove
+   */
+  public void removeBody(Body body) {
+    if (body != null) {
+      destroyBody(body);
+    }
   }
 }

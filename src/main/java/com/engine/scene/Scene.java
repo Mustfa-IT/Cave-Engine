@@ -3,8 +3,11 @@ package com.engine.scene;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.engine.components.PhysicsBodyComponent;
 import com.engine.core.GameEngine;
 import com.engine.entity.EntityFactory;
+
+import dev.dominion.ecs.api.Entity;
 
 /**
  * Represents a game scene with entities
@@ -12,6 +15,7 @@ import com.engine.entity.EntityFactory;
 public abstract class Scene {
   protected final EntityFactory entityFactory;
   protected GameEngine engine;
+  protected final List<Entity> sceneEntities = new ArrayList<>();
 
   public Scene(EntityFactory entityFactory) {
     this.entityFactory = entityFactory;
@@ -24,6 +28,17 @@ public abstract class Scene {
    */
   public void setEngine(GameEngine engine) {
     this.engine = engine;
+  }
+
+  /**
+   * Register an entity with this scene
+   *
+   * @param entity The entity to register
+   */
+  public void registerEntity(Entity entity) {
+    if (entity != null) {
+      sceneEntities.add(entity);
+    }
   }
 
   /**
@@ -44,6 +59,7 @@ public abstract class Scene {
    * Called when this scene becomes active
    */
   public void onActivate() {
+    this.initialize();
     // Default implementation does nothing, can be overridden by scenes
   }
 
@@ -51,6 +67,25 @@ public abstract class Scene {
    * Called when this scene becomes inactive
    */
   public void onDeactivate() {
-    // Default implementation does nothing, can be overridden by scenes
+    // Clean up all entities created in this scene
+    if (engine != null) {
+      cleanupEntities();
+    }
+  }
+
+  /**
+   * Clean up all entities created by this scene
+   */
+  protected void cleanupEntities() {
+    System.out.println("Scene Size " + sceneEntities.size());
+    for (Entity entity : sceneEntities) {
+      // Then delete the entity
+      var p = entity.get(PhysicsBodyComponent.class);
+      engine.getPhysicsWorld().removeBody(p.getBody());
+
+      engine.getEcs().deleteEntity(entity);
+    }
+    sceneEntities.clear();
+    System.out.println("Scene entities cleaned up");
   }
 }

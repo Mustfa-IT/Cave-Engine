@@ -8,13 +8,24 @@ import com.engine.entity.EntityFactory;
  * A test scene with basic physics objects
  */
 public class TestScene extends Scene {
+  long startTime;
 
   public TestScene(EntityFactory entityFactory) {
     super(entityFactory);
   }
 
   @Override
+  public void update(double deltaTime) {
+    if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
+      startTime = System.currentTimeMillis();
+      super.engine.getSceneManager().setActiveScene("test2");
+    }
+  }
+
+  @Override
   public void initialize() {
+    System.out.println("TestScene 1 activated");
+    startTime = System.currentTimeMillis();
     // Create ground
     entityFactory.createGround(400, 700, 800, 20, Color.GRAY);
 
@@ -26,23 +37,6 @@ public class TestScene extends Scene {
 
     // Create green rect
     entityFactory.createRect(310f, 100f, 10f, 20f, Color.GREEN, 1.0f, 0.3f, 0.3f);
-
-    System.out.println("TestScene initialized");
   }
 
-  @Override
-  public void update(double deltaTime) {
-    // Example of scene-specific logic that could be implemented here
-    // For instance, spawning new entities based on time or events
-  }
-
-  @Override
-  public void onActivate() {
-    System.out.println("TestScene activated");
-  }
-
-  @Override
-  public void onDeactivate() {
-    System.out.println("TestScene deactivated");
-  }
 }

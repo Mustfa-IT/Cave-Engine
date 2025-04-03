@@ -7,14 +7,16 @@ import org.jbox2d.collision.shapes.PolygonShape;
 import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.BodyType;
 
+import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
 import com.engine.graph.Circle;
 import com.engine.graph.Rect;
-import com.engine.pyhsics.PhysicsBodyComponent;
-import com.engine.pyhsics.PhysicsWorld;
+import com.engine.physics.PhysicsWorld;
+import com.engine.scene.Scene;
 
 import dev.dominion.ecs.api.Dominion;
+import dev.dominion.ecs.api.Entity;
 
 /**
  * Factory for creating game entities
@@ -22,10 +24,30 @@ import dev.dominion.ecs.api.Dominion;
 public class EntityFactory {
   private final Dominion ecs;
   private final PhysicsWorld physicsWorld;
+  private Scene currentScene;
 
   public EntityFactory(Dominion ecs, PhysicsWorld physicsWorld) {
     this.ecs = ecs;
     this.physicsWorld = physicsWorld;
+  }
+
+  /**
+   * Set the current active scene for entity registration
+   *
+   * @param scene Current scene
+   */
+  public void setCurrentScene(Scene scene) {
+    this.currentScene = scene;
+  }
+
+  /**
+   * Register created entity with current scene
+   */
+  private Entity registerWithScene(Entity entity) {
+    if (currentScene != null && entity != null) {
+      currentScene.registerEntity(entity);
+    }
+    return entity;
   }
 
   /**
@@ -51,11 +73,13 @@ public class EntityFactory {
         physicsWorld.toPhysicsWorld(height / 2));
 
     // Create entity
-    return ecs.createEntity(
+    Entity entity = ecs.createEntity(
         "ground",
         transform,
         new RenderableComponent(groundRect),
-        new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f)).toString();
+        new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f));
+
+    return registerWithScene(entity).toString();
   }
 
   /**
@@ -83,11 +107,13 @@ public class EntityFactory {
     // Create entity with random ID to allow multiple instances
     String entityId = "ball-" + Math.round(Math.random() * 10000);
 
-    return ecs.createEntity(
+    Entity entity = ecs.createEntity(
         entityId,
         transform,
         new RenderableComponent(ballCircle),
-        new PhysicsBodyComponent(ballBodyDef, ballShape, density, friction, restitution)).toString();
+        new PhysicsBodyComponent(ballBodyDef, ballShape, density, friction, restitution));
+
+    return registerWithScene(entity).toString();
   }
 
   public String createRect(float x, float y, float width, float height, Color color,
@@ -102,11 +128,13 @@ public class EntityFactory {
         physicsWorld.toPhysicsWorld(width / 2),
         physicsWorld.toPhysicsWorld(height / 2));
     String entityId = "rect-" + Math.round(Math.random() * 10000);
-    return ecs.createEntity(
+
+    Entity entity = ecs.createEntity(
         entityId,
         transform,
         new RenderableComponent(rectangle),
-        new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution))
-        .toString();
+        new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
+
+    return registerWithScene(entity).toString();
   }
 }

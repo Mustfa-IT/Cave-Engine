@@ -19,7 +19,7 @@ public class SceneManager {
 
   /**
    * Register a scene with the manager
-   * 
+   *
    * @param name  Scene identifier
    * @param scene The scene instance
    */
@@ -30,7 +30,7 @@ public class SceneManager {
 
   /**
    * Set the current active scene
-   * 
+   *
    * @param sceneName Name of the scene to activate
    */
   public void setActiveScene(String sceneName) {
@@ -47,26 +47,14 @@ public class SceneManager {
     Scene newScene = scenes.get(sceneName);
     this.currentScene = newScene;
 
-    // Initialize if needed and activate
+    // Set the new scene in the entity factory
+    engine.getEntityFactory().setCurrentScene(newScene);
+
+    // Activate the new scene
     newScene.onActivate();
   }
 
-  /**
-   * Initializes a specific scene
-   */
-  public void initializeScene(String sceneName) {
-    if (!scenes.containsKey(sceneName)) {
-      throw new IllegalArgumentException("Scene not found: " + sceneName);
-    }
-    scenes.get(sceneName).initialize();
-  }
 
-  /**
-   * Initialize all registered scenes
-   */
-  public void initializeAllScenes() {
-    scenes.values().forEach(Scene::initialize);
-  }
 
   /**
    * Update the current scene

@@ -1,4 +1,4 @@
-package com.engine.pyhsics;
+package com.engine.components;
 
 import org.jbox2d.collision.shapes.Shape;
 import org.jbox2d.dynamics.Body;

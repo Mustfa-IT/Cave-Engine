@@ -4,7 +4,7 @@ import org.jbox2d.common.Vec2;
 
 import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
-import com.engine.pyhsics.PhysicsWorld;
+import com.engine.physics.PhysicsWorld;
 import com.engine.scene.Scene;
 import com.engine.scene.SceneManager;
 
@@ -84,12 +84,6 @@ public class GameEngine {
     sceneManager.setActiveScene(sceneName);
   }
 
-  /**
-   * Initialize all scenes
-   */
-  public void initializeScenes() {
-    sceneManager.initializeAllScenes();
-  }
 
   public void start() {
     if (running)
