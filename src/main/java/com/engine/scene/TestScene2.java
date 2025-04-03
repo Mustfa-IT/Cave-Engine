@@ -29,7 +29,7 @@ public class TestScene2 extends Scene {
   @Override
   public void update(double deltaTime) {
     if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
-      super.engine.getSceneManager().setActiveScene("test");
+      super.engine.getSceneManager().pushScene("test");
     }
   }
 

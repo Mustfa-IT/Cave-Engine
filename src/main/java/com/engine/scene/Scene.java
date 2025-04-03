@@ -65,6 +65,7 @@ public abstract class Scene {
 
   /**
    * Called when this scene becomes inactive
+   * 
    */
   public void onDeactivate() {
     // Clean up all entities created in this scene

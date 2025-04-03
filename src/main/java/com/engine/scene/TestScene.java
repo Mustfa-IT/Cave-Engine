@@ -18,7 +18,7 @@ public class TestScene extends Scene {
   public void update(double deltaTime) {
     if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
       startTime = System.currentTimeMillis();
-      super.engine.getSceneManager().setActiveScene("test2");
+      super.engine.getSceneManager().popScene();;
     }
   }
 
