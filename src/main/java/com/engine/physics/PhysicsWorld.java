@@ -52,7 +52,6 @@ public class PhysicsWorld extends World {
   public void update(double deltaTime) {
     // Use fixed time steps with accumulator for stable physics
     accumulator += (float) deltaTime;
-
     // Perform multiple sub-steps if needed
     while (accumulator >= timeStep) {
       // Step the physics simulation with fixed timestep
