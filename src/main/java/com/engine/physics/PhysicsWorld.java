@@ -13,7 +13,7 @@ import dev.dominion.ecs.api.Results.With2;
 
 public class PhysicsWorld extends World {
   private final Dominion ecs;
-  private final float pixelsPerMeter = 30.0f; // Conversion factor between pixels and meters
+  private float worldUnitsPerMeter = 30.0f;
   private final int velocityIterations = 10;
   private final int positionIterations = 8;
   private float accumulator = 0.0f;
@@ -79,8 +79,8 @@ public class PhysicsWorld extends World {
 
       // Convert from physics world coordinates (meters) to screen coordinates
       // (pixels)
-      float screenX = position.x * pixelsPerMeter;
-      float screenY = position.y * pixelsPerMeter;
+      float screenX = position.x * worldUnitsPerMeter;
+      float screenY = position.y * worldUnitsPerMeter;
 
       // Apply the transform update
       transform.setX(screenX);
@@ -99,17 +99,18 @@ public class PhysicsWorld extends World {
   }
 
   // Helper methods for physics body creation
-  public Vec2 toPhysicsWorld(float x, float y) {
-    return new Vec2(x / pixelsPerMeter, y / pixelsPerMeter);
-  }
 
   public float toPhysicsWorld(float value) {
-    return value / pixelsPerMeter;
+    return value / worldUnitsPerMeter;
   }
 
-  public float fromPhysicsWorld(float v) {
-    return v * pixelsPerMeter;
-  }
+  public Vec2 toPhysicsWorld(float x, float y) {
+    return new Vec2(x / worldUnitsPerMeter, y / worldUnitsPerMeter);
+}
+
+public float fromPhysicsWorld(float v) {
+    return v * worldUnitsPerMeter;
+}
 
   // Helper method to correctly set a box shape in the physics world
   public void setBoxShape(PolygonShape shape, float halfWidth, float halfHeight) {

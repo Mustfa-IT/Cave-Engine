@@ -2,7 +2,6 @@ package com.engine.graph;
 
 import java.awt.Graphics2D;
 
-import com.engine.components.Transform;
 
 /**
  * A Circle shape that extends the abstract Shape.
@@ -10,8 +9,8 @@ import com.engine.components.Transform;
 public class Circle extends Shape {
   private final double diameter; // Store as diameter for consistency
 
-  public Circle(Transform transform, java.awt.Color color, double diameter) {
-    super(transform, color);
+  public Circle(java.awt.Color color, double diameter) {
+    super(color);
     this.diameter = diameter;
   }
 

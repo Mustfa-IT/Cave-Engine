@@ -9,6 +9,8 @@ import com.engine.entity.EntityFactory;
  */
 public class TestScene extends Scene {
   long startTime;
+  float cameraX = 100; // Starting X position for camera
+  float cameraDirection = 1; // Direction of camera movement
 
   public TestScene(EntityFactory entityFactory) {
     super(entityFactory);
@@ -16,10 +18,10 @@ public class TestScene extends Scene {
 
   @Override
   public void update(double deltaTime) {
+    // Original scene transition logic
     if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
       startTime = System.currentTimeMillis();
       super.engine.getSceneManager().popScene();
-      ;
     }
   }
 
@@ -40,5 +42,4 @@ public class TestScene extends Scene {
       entityFactory.createRect(310f + (i * 10), 100f, 10f, 20f, Color.GREEN, 1.0f, 0.3f, 0.3f);
     }
   }
-
 }

@@ -1,5 +1,7 @@
 package com.engine.core;
 
+import java.awt.event.ComponentEvent;
+import java.awt.event.ComponentListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.Callable;
@@ -10,6 +12,7 @@ public class GameWindow extends JFrame {
   private int width, height;
   private String title;
   private Callable<Void> onClose;
+  private ResizeHandler resizeHandler;
 
   public GameWindow() {
     this.width = 400 * 2;
@@ -39,6 +42,26 @@ public class GameWindow extends JFrame {
     this.onClose = onClose;
   }
 
+  public void setOnResize(ResizeHandler handler) {
+    this.resizeHandler = handler;
+    addComponentListener(new ComponentListener() {
+      public void componentResized(ComponentEvent e) {
+        if (resizeHandler != null) {
+          resizeHandler.onResize(e.getComponent().getWidth(), e.getComponent().getHeight());
+        }
+      }
+
+      public void componentMoved(ComponentEvent e) {
+      }
+
+      public void componentShown(ComponentEvent e) {
+      }
+
+      public void componentHidden(ComponentEvent e) {
+      }
+    });
+  }
+
   public void init() {
     this.setSize(width, height);
     this.setLocationRelativeTo(null);
@@ -53,6 +76,10 @@ public class GameWindow extends JFrame {
         }
       }
     });
+  }
+
+  public interface ResizeHandler {
+    void onResize(int width, int height);
   }
 
   public void initialize() {

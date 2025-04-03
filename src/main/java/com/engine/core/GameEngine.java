@@ -30,6 +30,7 @@ public class GameEngine {
   private State engineState = State.INITIALIZED;
   public Dominion ecs;
   private RenderSystem renderer;
+  private CameraSystem cameraSystem;
   private PhysicsWorld physicsWorld;
   private Vec2 defaultGravity = new Vec2(0, 9.8f);
   private boolean closedByWindow;
@@ -94,7 +95,9 @@ public class GameEngine {
       // Core systems initialization
       this.ecs = Dominion.create();
       this.physicsWorld = new PhysicsWorld(defaultGravity, ecs);
-      this.renderer = new RenderSystem(window, ecs);
+      this.cameraSystem = new CameraSystem(ecs);
+      this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 50, 510);
+      this.renderer = new RenderSystem(window, ecs, cameraSystem);
 
       // Create entity factory
       this.entityFactory = new EntityFactory(ecs, physicsWorld);
@@ -106,6 +109,7 @@ public class GameEngine {
       this.scheduler = ecs.createScheduler();
       this.scheduler.schedule(this::update);
       this.scheduler.schedule(() -> renderer.render());
+      this.scheduler.schedule(() -> cameraSystem.update((float) this.scheduler.deltaTime()));
 
       // Initialize FPS counter
       lastFpsReportTime = System.currentTimeMillis();
@@ -278,5 +282,9 @@ public class GameEngine {
 
   public PhysicsWorld getPhysicsWorld() {
     return physicsWorld;
+  }
+
+  public CameraSystem getCameraSystem() {
+    return cameraSystem;
   }
 }

@@ -58,7 +58,7 @@ public class EntityFactory {
     Transform transform = new Transform(x, y, 0, 1, 1);
 
     // Visual representation
-    Rect groundRect = new Rect(transform, color, width, height);
+    Rect groundRect = new Rect(color, width, height);
 
     // Physics body definition
     BodyDef groundBodyDef = new BodyDef();
@@ -91,7 +91,7 @@ public class EntityFactory {
     Transform transform = new Transform(x, y, 0, 1, 1);
 
     // Visual representation
-    Circle ballCircle = new Circle(transform, color, radius * 2); // Diameter
+    Circle ballCircle = new Circle(color, radius * 2); // Diameter
 
     // Physics body definition
     BodyDef ballBodyDef = new BodyDef();
@@ -119,7 +119,7 @@ public class EntityFactory {
   public String createRect(float x, float y, float width, float height, Color color,
       float density, float friction, float restitution) {
     Transform transform = new Transform(x, y, 0, 1, 1);
-    Rect rectangle = new Rect(transform, color, width, height);
+    Rect rectangle = new Rect(color, width, height);
     BodyDef bodyDef = new BodyDef();
     bodyDef.type = BodyType.DYNAMIC;
     bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
