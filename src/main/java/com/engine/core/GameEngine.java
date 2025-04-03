@@ -7,6 +7,7 @@ import com.engine.graph.RenderSystem;
 import com.engine.physics.PhysicsWorld;
 import com.engine.scene.Scene;
 import com.engine.scene.SceneManager;
+import com.engine.ui.UISystem;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;
@@ -44,13 +45,13 @@ public class GameEngine {
   private double averageFps = 0;
   private boolean showPerformanceStats = false;
 
-
   // Configuration
   private Properties config = new Properties();
 
   // Integrated components
   private EntityFactory entityFactory;
   private SceneManager sceneManager;
+  private UISystem uiSystem;
 
   public GameEngine() {
     loadConfig();
@@ -109,14 +110,18 @@ public class GameEngine {
       // Create entity factory
       this.entityFactory = new EntityFactory(ecs, physicsWorld);
 
-      // Create scene manager with reference to this engine
-      this.sceneManager = new SceneManager(this);
+      // Initialize UI system
+      this.uiSystem = new UISystem(window, ecs);
+
+      // Create scene manager with reference to engine, entity factory, and UI system
+      this.sceneManager = new SceneManager(this, entityFactory, uiSystem);
 
       // Setup the main loop scheduler
       this.scheduler = ecs.createScheduler();
       this.scheduler.schedule(this::update);
       this.scheduler.schedule(() -> renderer.render());
       this.scheduler.schedule(() -> cameraSystem.update((float) this.scheduler.deltaTime()));
+      this.scheduler.schedule(() -> uiSystem.update(this.scheduler.deltaTime()));
 
       // Initialize FPS counter
       lastFpsReportTime = System.currentTimeMillis();
@@ -293,5 +298,9 @@ public class GameEngine {
 
   public CameraSystem getCameraSystem() {
     return cameraSystem;
+  }
+
+  public UISystem getUiSystem() {
+    return uiSystem;
   }
 }

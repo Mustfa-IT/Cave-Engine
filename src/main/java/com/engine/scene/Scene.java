@@ -6,13 +6,14 @@ import java.util.List;
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.core.GameEngine;
 import com.engine.entity.EntityFactory;
+import com.engine.entity.EntityRegistrar;
 
 import dev.dominion.ecs.api.Entity;
 
 /**
  * Represents a game scene with entities
  */
-public abstract class Scene {
+public abstract class Scene implements EntityRegistrar {
   protected final EntityFactory entityFactory;
   protected GameEngine engine;
   protected final List<Entity> sceneEntities = new ArrayList<>();
@@ -35,10 +36,12 @@ public abstract class Scene {
    *
    * @param entity The entity to register
    */
-  public void registerEntity(Entity entity) {
+  @Override
+  public Entity registerEntity(Entity entity) {
     if (entity != null) {
       sceneEntities.add(entity);
     }
+    return entity;
   }
 
   /**
@@ -65,7 +68,7 @@ public abstract class Scene {
 
   /**
    * Called when this scene becomes inactive
-   * 
+   *
    */
   public void onDeactivate() {
     // Clean up all entities created in this scene
@@ -82,7 +85,8 @@ public abstract class Scene {
     for (Entity entity : sceneEntities) {
       // Then delete the entity
       var p = entity.get(PhysicsBodyComponent.class);
-      engine.getPhysicsWorld().removeBody(p.getBody());
+      if (p != null)
+        engine.getPhysicsWorld().removeBody(p.getBody());
 
       engine.getEcs().deleteEntity(entity);
     }

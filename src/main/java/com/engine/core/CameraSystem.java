@@ -94,20 +94,12 @@ public class CameraSystem {
 
     Graphics2D g2d = (Graphics2D) g.create();
 
-    // Save the original transform
-    AffineTransform originalTransform = g2d.getTransform();
 
-    // Step 1: Translate to the viewport center (screen space origin)
     g2d.translate(cam.getViewportX() + cam.getViewportWidth() / 2.0,
         cam.getViewportY() + cam.getViewportHeight() / 2.0);
 
-    // Step 2: Apply camera zoom
     g2d.scale(cam.getZoom(), cam.getZoom());
 
-    // REMOVE Y-axis inversion - this was causing the upside-down world
-    // Now we're using standard screen coordinates with Y increasing downward
-
-    // Step 3: Translate by negative camera position
     g2d.translate(-transform.getX(), -transform.getY());
 
     return g2d;

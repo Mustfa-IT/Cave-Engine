@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Stack;
 
 import com.engine.core.GameEngine;
+import com.engine.entity.EntityFactory;
+import com.engine.ui.UISystem;
 
 /**
  * Manages scenes in the game
@@ -14,9 +16,13 @@ public class SceneManager {
   private final Map<String, Scene> scenes = new HashMap<>();
   private final GameEngine engine;
   private final Stack<Scene> sceneStack = new Stack<>();
+  private final EntityFactory entityFactory;
+  private final UISystem uiSystem;
 
-  public SceneManager(GameEngine engine) {
+  public SceneManager(GameEngine engine, EntityFactory entityFactory, UISystem uiSystem) {
     this.engine = engine;
+    this.entityFactory = entityFactory;
+    this.uiSystem = uiSystem;
   }
 
   /**
@@ -49,8 +55,10 @@ public class SceneManager {
     Scene newScene = scenes.get(sceneName);
     this.currentScene = newScene;
 
-    // Set the new scene in the entity factory
-    engine.getEntityFactory().setCurrentScene(newScene);
+    // Set the new scene as the entity registrar for both entity factory and UI
+    // system
+    entityFactory.setCurrentRegistrar(newScene);
+    uiSystem.setCurrentRegistrar(newScene);
 
     // Activate the new scene
     newScene.onActivate();
@@ -70,7 +78,11 @@ public class SceneManager {
       sceneStack.push(currentScene);
     }
     currentScene = scenes.get(sceneName);
-    engine.getEntityFactory().setCurrentScene(currentScene);
+
+    // Set the new scene as registrar for both systems
+    entityFactory.setCurrentRegistrar(currentScene);
+    uiSystem.setCurrentRegistrar(currentScene);
+
     currentScene.onActivate();
   }
 
@@ -81,7 +93,11 @@ public class SceneManager {
     if (!sceneStack.isEmpty()) {
       currentScene.onDeactivate();
       currentScene = sceneStack.pop();
-      engine.getEntityFactory().setCurrentScene(currentScene);
+
+      // Set the previous scene as registrar for both systems
+      entityFactory.setCurrentRegistrar(currentScene);
+      uiSystem.setCurrentRegistrar(currentScene);
+
       currentScene.onActivate();
     }
   }

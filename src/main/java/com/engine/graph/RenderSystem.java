@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 import com.engine.components.CameraComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
-
+import com.engine.components.UIComponent;
 import com.engine.core.CameraSystem;
 import com.engine.core.GameEngine;
 import com.engine.core.GameWindow;
@@ -44,7 +44,6 @@ public class RenderSystem {
 
     // Get base graphics context for the frame
     Graphics2D g = (Graphics2D) bs.getDrawGraphics();
-
     // Clear the screen
     g.clearRect(0, 0, window.getWidth(), window.getHeight());
 
@@ -68,6 +67,11 @@ public class RenderSystem {
     Graphics2D cameraTranformedG = cameraSystem.applyActiveCamera((Graphics2D) g.create());
     renderEntities(cameraTranformedG);
     cameraTranformedG.dispose();
+
+    // Create a separate graphics context for UI (not affected by camera)
+    Graphics2D uiG = (Graphics2D) g.create();
+    renderUI(uiG);
+    uiG.dispose();
 
     // Clean up and display
     g.dispose();
@@ -134,6 +138,16 @@ public class RenderSystem {
     g2d.fillOval(-5, -5, 10, 10);
 
     g2d.dispose();
+  }
+
+  /**
+   * Render UI Elements
+   */
+  private void renderUI(Graphics2D g) {
+    world.findEntitiesWith(UIComponent.class).forEach((c) -> {
+      UIComponent com = c.comp();
+      com.render(g);
+    });
   }
 
   /**

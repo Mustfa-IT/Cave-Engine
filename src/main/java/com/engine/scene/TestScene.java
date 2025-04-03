@@ -42,5 +42,6 @@ public class TestScene extends Scene {
       // Create green rectangles
       entityFactory.createRect(i * 30 - 400, 200, 10f, 20f, Color.GREEN, 1.0f, 0.3f, 0.3f);
     }
+    engine.getUiSystem().createLabel("Hello",100f,100f);
   }
 }

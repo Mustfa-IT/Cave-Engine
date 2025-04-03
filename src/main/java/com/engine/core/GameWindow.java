@@ -2,6 +2,7 @@ package com.engine.core;
 
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.MouseAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.concurrent.Callable;
@@ -60,6 +61,15 @@ public class GameWindow extends JFrame {
       public void componentHidden(ComponentEvent e) {
       }
     });
+  }
+
+  // Add simplified methods to add mouse listeners
+  public void addMouseListener(MouseAdapter mouseAdapter) {
+    super.addMouseListener(mouseAdapter);
+  }
+
+  public void addMouseMotionListener(MouseAdapter mouseAdapter) {
+    super.addMouseMotionListener(mouseAdapter);
   }
 
   public void init() {

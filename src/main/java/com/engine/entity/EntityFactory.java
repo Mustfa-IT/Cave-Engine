@@ -13,7 +13,6 @@ import com.engine.components.Transform;
 import com.engine.graph.Circle;
 import com.engine.graph.Rect;
 import com.engine.physics.PhysicsWorld;
-import com.engine.scene.Scene;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -25,7 +24,7 @@ import dev.dominion.ecs.api.Entity;
 public class EntityFactory {
   private final Dominion ecs;
   private final PhysicsWorld physicsWorld;
-  private Scene currentScene;
+  private EntityRegistrar currentRegistrar;
 
   public EntityFactory(Dominion ecs, PhysicsWorld physicsWorld) {
     this.ecs = ecs;
@@ -33,18 +32,18 @@ public class EntityFactory {
   }
 
   /**
-   * Set the current active scene for entity registration
+   * Set the current entity registrar
    */
-  public void setCurrentScene(Scene scene) {
-    this.currentScene = scene;
+  public void setCurrentRegistrar(EntityRegistrar registrar) {
+    this.currentRegistrar = registrar;
   }
 
   /**
-   * Register created entity with current scene
+   * Register created entity with current registrar
    */
-  private Entity registerWithScene(Entity entity) {
-    if (currentScene != null && entity != null) {
-      currentScene.registerEntity(entity);
+  private Entity registerWithRegistrar(Entity entity) {
+    if (currentRegistrar != null && entity != null) {
+      return currentRegistrar.registerEntity(entity);
     }
     return entity;
   }
@@ -77,7 +76,7 @@ public class EntityFactory {
         new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f));
 
     System.out.println("Created ground at: " + x + "," + y + " with size: " + width + "x" + height);
-    return registerWithScene(entity).toString();
+    return registerWithRegistrar(entity).toString();
   }
 
   /**
@@ -112,7 +111,7 @@ public class EntityFactory {
         new PhysicsBodyComponent(ballBodyDef, ballShape, density, friction, restitution));
 
     System.out.println("Created ball at: " + x + "," + y + " with radius: " + radius);
-    return registerWithScene(entity).toString();
+    return registerWithRegistrar(entity).toString();
   }
 
   public String createRect(float x, float y, float width, float height, Color color,
@@ -142,6 +141,6 @@ public class EntityFactory {
         new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
 
     System.out.println("Created rectangle at: " + x + "," + y + " with size: " + width + "x" + height);
-    return registerWithScene(entity).toString();
+    return registerWithRegistrar(entity).toString();
   }
 }
