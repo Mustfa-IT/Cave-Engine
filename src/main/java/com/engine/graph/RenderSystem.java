@@ -1,6 +1,8 @@
 package com.engine.graph;
 
 import java.awt.Graphics2D;
+import java.awt.Color;
+import java.awt.BasicStroke;
 import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 import java.util.logging.Logger;
@@ -46,6 +48,9 @@ public class RenderSystem {
     // Clear the screen
     g.clearRect(0, 0, window.getWidth(), window.getHeight());
 
+    // Draw world grid for reference (optional)
+    // drawWorldGrid(g);
+
     // Get the camera-transformed graphics context
     Entity camera = cameraSystem.getActiveCamera();
     if (camera != null) {
@@ -71,6 +76,67 @@ public class RenderSystem {
   }
 
   /**
+   * Draw a reference grid in world space for debugging
+   */
+  private void drawWorldGrid(Graphics2D g) {
+    Entity camera = cameraSystem.getActiveCamera();
+    if (camera == null)
+      return;
+
+    CameraComponent camComponent = camera.get(CameraComponent.class);
+    if (camComponent == null)
+      return;
+
+    // Get screen dimensions
+    int screenWidth = window.getWidth();
+    int screenHeight = window.getHeight();
+
+    // Convert screen edges to world coordinates
+    float[] topLeft = cameraSystem.screenToWorld(0, 0);
+    float[] bottomRight = cameraSystem.screenToWorld(screenWidth, screenHeight);
+
+    // Draw coordinate axes with transformed graphics
+    Graphics2D g2d = cameraSystem.applyActiveCamera((Graphics2D) g.create());
+
+    // Set up line style
+    g2d.setColor(new Color(0, 0, 255, 128)); // Semi-transparent blue
+    g2d.setStroke(new BasicStroke(0.5f));
+
+    // Draw grid lines
+    float gridSize = 50; // Size of each grid cell
+
+    // Calculate grid bounds based on screen edges in world space
+    float startX = (float) (Math.floor(topLeft[0] / gridSize) * gridSize);
+    float endX = (float) (Math.ceil(bottomRight[0] / gridSize) * gridSize);
+    float startY = (float) (Math.floor(topLeft[1] / gridSize) * gridSize);
+    float endY = (float) (Math.ceil(bottomRight[1] / gridSize) * gridSize);
+
+    // Draw vertical grid lines
+    for (float x = startX; x <= endX; x += gridSize) {
+      g2d.drawLine((int) x, (int) startY, (int) x, (int) endY);
+    }
+
+    // Draw horizontal grid lines
+    for (float y = startY; y <= endY; y += gridSize) {
+      g2d.drawLine((int) startX, (int) y, (int) endX, (int) y);
+    }
+
+    // Draw the main axes with stronger lines
+    g2d.setStroke(new BasicStroke(2.0f));
+    g2d.setColor(Color.RED);
+    g2d.drawLine(-1000, 0, 1000, 0); // X-axis
+
+    g2d.setColor(Color.GREEN);
+    g2d.drawLine(0, -1000, 0, 1000); // Y-axis
+
+    // Draw origin marker
+    g2d.setColor(Color.WHITE);
+    g2d.fillOval(-5, -5, 10, 10);
+
+    g2d.dispose();
+  }
+
+  /**
    * Renders entities using the camera-transformed graphics context
    */
   private void renderEntities(Graphics2D g) {
@@ -88,14 +154,6 @@ public class RenderSystem {
 
       // Render the entity with the combined transformations (camera + entity)
       renderable.render(entityG);
-
-      // Occasionally log entity position for debugging
-      if (Math.random() < 0.001) { // Limit to avoid excessive logging
-        String entityId = result.entity().toString();
-        if (entityId.startsWith("ball") || entityId.startsWith("rect")) {
-          LOGGER.fine("Entity " + entityId + " at " + transform.getX() + ", " + transform.getY());
-        }
-      }
 
       entityG.dispose();
     });

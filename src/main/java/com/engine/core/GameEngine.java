@@ -32,6 +32,7 @@ public class GameEngine {
   private RenderSystem renderer;
   private CameraSystem cameraSystem;
   private PhysicsWorld physicsWorld;
+  // Correctly set up gravity for Box2D (positive is DOWN in Box2D)
   private Vec2 defaultGravity = new Vec2(0, 9.8f);
   private boolean closedByWindow;
   private Scheduler scheduler;
@@ -43,8 +44,6 @@ public class GameEngine {
   private double averageFps = 0;
   private boolean showPerformanceStats = false;
 
-  // Physics debug options
-  private boolean physicsDebug = false;
 
   // Configuration
   private Properties config = new Properties();
@@ -79,6 +78,7 @@ public class GameEngine {
 
       // Apply configuration
       targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
+      // Note: Physics world will invert the Y gravity value
       defaultGravity = new Vec2(
           Float.parseFloat(config.getProperty("physics.gravityX", "0")),
           Float.parseFloat(config.getProperty("physics.gravityY", "9.8")));
@@ -96,7 +96,14 @@ public class GameEngine {
       this.ecs = Dominion.create();
       this.physicsWorld = new PhysicsWorld(defaultGravity, ecs);
       this.cameraSystem = new CameraSystem(ecs);
-      this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 50, 510);
+
+      // Set up the window resize handler
+      this.window.setOnResize((width, height) -> {
+        cameraSystem.updateAllViewports(width, height);
+      });
+
+      // Create camera at world origin (0,0)
+      this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 0, 0);
       this.renderer = new RenderSystem(window, ecs, cameraSystem);
 
       // Create entity factory

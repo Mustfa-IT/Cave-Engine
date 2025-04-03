@@ -19,7 +19,8 @@ import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
 
 /**
- * Factory for creating game entities
+ * Factory for creating game entities in world coordinates
+ * where (0,0) is the center of the viewport
  */
 public class EntityFactory {
   private final Dominion ecs;
@@ -33,8 +34,6 @@ public class EntityFactory {
 
   /**
    * Set the current active scene for entity registration
-   *
-   * @param scene Current scene
    */
   public void setCurrentScene(Scene scene) {
     this.currentScene = scene;
@@ -51,26 +50,24 @@ public class EntityFactory {
   }
 
   /**
-   * Creates a static ground platform
+   * Creates a static ground platform in world coordinates
    */
   public String createGround(float x, float y, float width, float height, Color color) {
-    // Create transform
-    Transform transform = new Transform(x, y, 0, 1, 1);
-
-    // Visual representation
-    Rect groundRect = new Rect(color, width, height);
-
-    // Physics body definition
+    // Create physics body definition
     BodyDef groundBodyDef = new BodyDef();
     groundBodyDef.type = BodyType.STATIC;
-    groundBodyDef.position = physicsWorld.toPhysicsWorld((float) x, (float) y);
+    groundBodyDef.position = physicsWorld.toPhysicsWorld(x, y);
     groundBodyDef.fixedRotation = true;
 
     // Physics shape
     PolygonShape groundShape = new PolygonShape();
-    groundShape.setAsBox(
-        physicsWorld.toPhysicsWorld(width / 2),
-        physicsWorld.toPhysicsWorld(height / 2));
+    physicsWorld.setBoxShape(groundShape, width / 2, height / 2);
+
+    // Visual representation
+    Rect groundRect = new Rect(color, width, height);
+
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
 
     // Create entity
     Entity entity = ecs.createEntity(
@@ -79,20 +76,15 @@ public class EntityFactory {
         new RenderableComponent(groundRect),
         new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f));
 
+    System.out.println("Created ground at: " + x + "," + y + " with size: " + width + "x" + height);
     return registerWithScene(entity).toString();
   }
 
   /**
-   * Creates a dynamic ball
+   * Creates a dynamic ball in world coordinates
    */
   public String createBall(float x, float y, float radius, Color color,
       float density, float friction, float restitution) {
-    // Create transform
-    Transform transform = new Transform(x, y, 0, 1, 1);
-
-    // Visual representation
-    Circle ballCircle = new Circle(color, radius * 2); // Diameter
-
     // Physics body definition
     BodyDef ballBodyDef = new BodyDef();
     ballBodyDef.type = BodyType.DYNAMIC;
@@ -104,7 +96,13 @@ public class EntityFactory {
     CircleShape ballShape = new CircleShape();
     ballShape.setRadius(physicsWorld.toPhysicsWorld(radius));
 
-    // Create entity with random ID to allow multiple instances
+    // Visual representation
+    Circle ballCircle = new Circle(color, radius * 2);
+
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
     String entityId = "ball-" + Math.round(Math.random() * 10000);
 
     Entity entity = ecs.createEntity(
@@ -113,20 +111,28 @@ public class EntityFactory {
         new RenderableComponent(ballCircle),
         new PhysicsBodyComponent(ballBodyDef, ballShape, density, friction, restitution));
 
+    System.out.println("Created ball at: " + x + "," + y + " with radius: " + radius);
     return registerWithScene(entity).toString();
   }
 
   public String createRect(float x, float y, float width, float height, Color color,
       float density, float friction, float restitution) {
-    Transform transform = new Transform(x, y, 0, 1, 1);
-    Rect rectangle = new Rect(color, width, height);
+    // Physics body definition
     BodyDef bodyDef = new BodyDef();
     bodyDef.type = BodyType.DYNAMIC;
     bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+
+    // Physics shape
     PolygonShape shape = new PolygonShape();
-    shape.setAsBox(
-        physicsWorld.toPhysicsWorld(width / 2),
-        physicsWorld.toPhysicsWorld(height / 2));
+    physicsWorld.setBoxShape(shape, width / 2, height / 2);
+
+    // Visual representation
+    Rect rectangle = new Rect(color, width, height);
+
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
     String entityId = "rect-" + Math.round(Math.random() * 10000);
 
     Entity entity = ecs.createEntity(
@@ -135,6 +141,7 @@ public class EntityFactory {
         new RenderableComponent(rectangle),
         new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
 
+    System.out.println("Created rectangle at: " + x + "," + y + " with size: " + width + "x" + height);
     return registerWithScene(entity).toString();
   }
 }

@@ -2,7 +2,6 @@ package com.engine.graph;
 
 import java.awt.Graphics2D;
 
-
 public class Rect extends Shape {
   private final double width;
   private final double height;
@@ -15,7 +14,7 @@ public class Rect extends Shape {
 
   @Override
   protected void drawShape(Graphics2D g) {
-    // Draw the rectangle centered at (0,0) - fixed to use halfHeight properly
-    g.fillRect((int)-width/2,(int) -height/2,(int) width,(int) height);
+    // Center the rectangle at (0,0) - this works correctly in world space
+    g.fillRect((int) -width / 2, (int) -height / 2, (int) width, (int) height);
   }
 }

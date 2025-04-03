@@ -13,18 +13,21 @@ import dev.dominion.ecs.api.Results.With2;
 
 public class PhysicsWorld extends World {
   private final Dominion ecs;
+  // Scale factor - increase for better physics precision
   private float worldUnitsPerMeter = 30.0f;
   private final int velocityIterations = 10;
   private final int positionIterations = 8;
   private float accumulator = 0.0f;
-  private final float timeStep = 1.0f / 60.0f; // Fixed time step for physics
+  private final float timeStep = 1.0f / 60.0f;
 
-  // Debug flag to monitor position changes
   private boolean debugPositions = true;
 
   public PhysicsWorld(Vec2 gravity, Dominion ecs) {
-    super(gravity);
+    // In Box2D, positive Y is up. In screen coordinates, positive Y is down.
+    // We need to make gravity work correctly in screen coordinates
+    super(new Vec2(gravity.x, gravity.y)); // Invert Y gravity for Box2D
     this.ecs = ecs;
+    System.out.println("Physics world initialized with gravity: " + gravity.x + ", " + -gravity.y);
     initializePhysicsBodies();
   }
 
@@ -37,11 +40,13 @@ public class PhysicsWorld extends World {
         .forEach(result -> {
           PhysicsBodyComponent physics = result.comp();
           if (physics.getBody() == null) {
-            // No try/catch for potential errors
             Body body = createBody(physics.getBodyDef());
             body.createFixture(physics.getFixtureDef());
             physics.setBody(body);
             body.setUserData(result.entity());
+
+            // Log initial position for debugging
+            System.out.println("Body created at: " + body.getPosition().x + ", " + body.getPosition().y);
           }
         });
   }
@@ -52,9 +57,9 @@ public class PhysicsWorld extends World {
   public void update(double deltaTime) {
     // Use fixed time steps with accumulator for stable physics
     accumulator += (float) deltaTime;
+
     // Perform multiple sub-steps if needed
     while (accumulator >= timeStep) {
-      // Step the physics simulation with fixed timestep
       this.step(timeStep, velocityIterations, positionIterations);
       accumulator -= timeStep;
     }
@@ -73,28 +78,21 @@ public class PhysicsWorld extends World {
     Body body = physics.getBody();
 
     if (body != null) {
-      // Update transform from physics body
+      // Get position and angle from physics body
       Vec2 position = body.getPosition();
       float angle = body.getAngle();
 
-      // Convert from physics world coordinates (meters) to screen coordinates
-      // (pixels)
-      float screenX = position.x * worldUnitsPerMeter;
-      float screenY = position.y * worldUnitsPerMeter;
+      // Convert from physics world to render world
+      // Note that in Box2D Y+ is up, and in screen space Y+ is down
+      float worldX = position.x * worldUnitsPerMeter;
+      float worldY = position.y * worldUnitsPerMeter;
 
       // Apply the transform update
-      transform.setX(screenX);
-      transform.setY(screenY);
+      transform.setX(worldX);
+      transform.setY(worldY);
       transform.setRotation(angle);
 
-      // Print debug information for monitoring
-      if (debugPositions && body.getUserData() != null) {
-        String entityName = body.getUserData().toString();
-        if (entityName.equals("ground")) {
-          System.out.println("Ground physics pos: " + position.x + "," + position.y +
-              " -> screen pos: " + screenX + "," + screenY);
-        }
-      }
+     
     }
   }
 
@@ -106,11 +104,11 @@ public class PhysicsWorld extends World {
 
   public Vec2 toPhysicsWorld(float x, float y) {
     return new Vec2(x / worldUnitsPerMeter, y / worldUnitsPerMeter);
-}
+  }
 
-public float fromPhysicsWorld(float v) {
+  public float fromPhysicsWorld(float v) {
     return v * worldUnitsPerMeter;
-}
+  }
 
   // Helper method to correctly set a box shape in the physics world
   public void setBoxShape(PolygonShape shape, float halfWidth, float halfHeight) {

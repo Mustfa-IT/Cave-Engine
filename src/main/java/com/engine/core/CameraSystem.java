@@ -7,6 +7,7 @@ import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
 
 import java.awt.Graphics2D;
+import java.awt.geom.AffineTransform;
 import java.util.logging.Logger;
 
 public class CameraSystem {
@@ -79,6 +80,7 @@ public class CameraSystem {
 
   /**
    * Applies the active camera's viewport transform to the graphics context
+   * This converts from world coordinates to screen coordinates
    */
   public Graphics2D applyActiveCamera(Graphics2D g) {
     if (activeCamera == null)
@@ -90,24 +92,89 @@ public class CameraSystem {
     if (cam == null || transform == null)
       return g;
 
-    // Debug output to track camera transform
-    LOGGER.fine("Applying camera transform: " + transform.getX() + ", " + transform.getY() +
-        " with zoom: " + cam.getZoom());
-
     Graphics2D g2d = (Graphics2D) g.create();
 
-    // First, translate to the viewport center
+    // Save the original transform
+    AffineTransform originalTransform = g2d.getTransform();
+
+    // Step 1: Translate to the viewport center (screen space origin)
     g2d.translate(cam.getViewportX() + cam.getViewportWidth() / 2.0,
         cam.getViewportY() + cam.getViewportHeight() / 2.0);
 
-    // Apply zoom
+    // Step 2: Apply camera zoom
     g2d.scale(cam.getZoom(), cam.getZoom());
 
-    // Finally, translate by negative camera position to move the world
-    // This is the key transformation that makes camera movement work
+    // REMOVE Y-axis inversion - this was causing the upside-down world
+    // Now we're using standard screen coordinates with Y increasing downward
+
+    // Step 3: Translate by negative camera position
     g2d.translate(-transform.getX(), -transform.getY());
 
     return g2d;
+  }
+
+  /**
+   * Convert a screen coordinate to world coordinate
+   *
+   * @param screenX Screen X coordinate
+   * @param screenY Screen Y coordinate
+   * @return float[] containing worldX at index 0 and worldY at index 1
+   */
+  public float[] screenToWorld(float screenX, float screenY) {
+    if (activeCamera == null)
+      return new float[] { screenX, screenY };
+
+    CameraComponent cam = activeCamera.get(CameraComponent.class);
+    Transform transform = activeCamera.get(Transform.class);
+
+    if (cam == null || transform == null)
+      return new float[] { screenX, screenY };
+
+    // Adjust for viewport position
+    screenX -= (cam.getViewportX() + cam.getViewportWidth() / 2.0);
+    screenY -= (cam.getViewportY() + cam.getViewportHeight() / 2.0);
+
+    // Apply inverse zoom
+    screenX /= cam.getZoom();
+    screenY /= cam.getZoom(); // No Y-inversion anymore
+
+    // Apply camera position offset
+    screenX += transform.getX();
+    screenY += transform.getY();
+
+    return new float[] { screenX, screenY };
+  }
+
+  /**
+   * Convert a world coordinate to screen coordinate
+   *
+   * @param worldX World X coordinate
+   * @param worldY World Y coordinate
+   * @return float[] containing screenX at index 0 and screenY at index 1
+   */
+  public float[] worldToScreen(float worldX, float worldY) {
+    if (activeCamera == null)
+      return new float[] { worldX, worldY };
+
+    CameraComponent cam = activeCamera.get(CameraComponent.class);
+    Transform transform = activeCamera.get(Transform.class);
+
+    if (cam == null || transform == null)
+      return new float[] { worldX, worldY };
+
+    // Apply camera position offset
+    worldX -= transform.getX();
+    worldY -= transform.getY();
+
+    // Apply zoom
+    worldX *= cam.getZoom();
+    worldY *= cam.getZoom(); // No Y-inversion anymore
+
+    // Adjust for viewport position
+    worldX += (cam.getViewportX() + cam.getViewportWidth() / 2.0);
+    worldY += (cam.getViewportY() + cam.getViewportHeight() / 2.0);
+
+    return new float[] { worldX, worldY };
   }
 
   /**
@@ -153,16 +220,5 @@ public class CameraSystem {
   public void update(float deltaTime) {
     if (activeCamera == null)
       return;
-
-    // Example of how to implement camera movement:
-    // This could be replaced with input handling or target following
-
-    // Log camera position periodically for debugging
-    if (Math.random() < 0.01) { // Only log occasionally to avoid spam
-      Transform transform = activeCamera.get(Transform.class);
-      if (transform != null) {
-        LOGGER.fine("Current camera position: " + transform.getX() + ", " + transform.getY());
-      }
-    }
   }
 }
