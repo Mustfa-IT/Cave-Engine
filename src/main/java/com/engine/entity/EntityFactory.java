@@ -1,6 +1,7 @@
 package com.engine.entity;
 
 import java.awt.Color;
+import java.awt.image.BufferedImage;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
@@ -15,10 +16,13 @@ import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
 import com.engine.components.GameObjectComponent;
+import com.engine.components.SpriteComponent;
+import com.engine.components.SpriteAnimationComponent;
 import com.engine.graph.Circle;
 import com.engine.graph.Rect;
 import com.engine.gameobject.GameObject;
 import com.engine.physics.PhysicsWorld;
+import com.engine.animation.Animation;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -347,6 +351,74 @@ public class EntityFactory {
   }
 
   /**
+   * Creates a sprite entity
+   *
+   * @param x     X coordinate in world space
+   * @param y     Y coordinate in world space
+   * @param image Image to render
+   * @return Created entity
+   */
+  public Entity createSprite(float x, float y, BufferedImage image) {
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
+    String entityId = "sprite-" + Math.round(Math.random() * 10000);
+
+    // Create sprite component
+    SpriteComponent spriteComponent = new SpriteComponent(image);
+
+    Entity entity = ecs.createEntity(
+        entityId,
+        transform,
+        spriteComponent);
+
+    System.out.println("Created sprite at: " + x + "," + y);
+    return registerWithRegistrar(entity);
+  }
+
+  /**
+   * Creates an animated sprite entity
+   *
+   * @param x            X coordinate in world space
+   * @param y            Y coordinate in world space
+   * @param defaultImage Default image to show
+   * @param animations   Array of animations to add
+   * @return Created entity
+   */
+  public Entity createAnimatedSprite(float x, float y, BufferedImage defaultImage, Animation... animations) {
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
+    String entityId = "animated-sprite-" + Math.round(Math.random() * 10000);
+
+    // Create sprite component
+    SpriteComponent spriteComponent = new SpriteComponent(defaultImage);
+
+    // Create animation component
+    SpriteAnimationComponent animComponent = new SpriteAnimationComponent();
+
+    // Add animations
+    if (animations != null) {
+      for (Animation anim : animations) {
+        if (anim != null) {
+          animComponent.addAnimation(anim);
+        }
+      }
+    }
+
+    Entity entity = ecs.createEntity(
+        entityId,
+        transform,
+        spriteComponent,
+        animComponent);
+
+    System.out.println("Created animated sprite at: " + x + "," + y);
+    return registerWithRegistrar(entity);
+  }
+
+  /**
    * Represents physics parameters for creating physics-enabled GameObjects
    */
   public static class PhysicsParameters {
@@ -391,7 +463,7 @@ public class EntityFactory {
 
     /**
      * Set this body as a sensor (triggers collisions but has no physical response)
-     * 
+     *
      * @param isSensor True if this body should be a sensor
      * @return This parameters instance for method chaining
      */
@@ -402,7 +474,7 @@ public class EntityFactory {
 
     /**
      * Set the collision category bits (which collision group this body belongs to)
-     * 
+     *
      * @param category The category bits
      * @return This parameters instance for method chaining
      */
@@ -414,7 +486,7 @@ public class EntityFactory {
     /**
      * Set the collision mask bits (which collision groups this body should collide
      * with)
-     * 
+     *
      * @param mask The mask bits
      * @return This parameters instance for method chaining
      */

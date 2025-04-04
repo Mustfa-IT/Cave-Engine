@@ -24,6 +24,7 @@ import com.engine.scene.SceneManager;
 import com.engine.ui.UISystem;
 import com.engine.assets.AssetManager;
 import com.engine.events.EventSystem;
+import com.engine.animation.AnimationSystem;
 
 import dagger.Binds;
 import dagger.Module;
@@ -148,14 +149,21 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
+    public AnimationSystem provideAnimationSystem(Dominion ecs) {
+      return new AnimationSystem(ecs);
+    }
+
+    @Provides
+    @Singleton
     public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, Properties config,
-        EventSystem eventSystem, AssetManager assetManager) {
+        EventSystem eventSystem, AssetManager assetManager,
+        AnimationSystem animationSystem) {
       GameEngine engine = new GameEngine(window, ecs, renderer, cameraSystem,
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
-          config, eventSystem, assetManager);
+          config, eventSystem, assetManager, animationSystem);
 
       // Initialize console right after engine creation
       engine.createConsole();

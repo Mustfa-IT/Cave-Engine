@@ -13,6 +13,7 @@ import javax.inject.Singleton;
 import com.engine.components.CameraComponent;
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
+import com.engine.components.SpriteComponent;
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
 import com.engine.components.GameObjectComponent;
@@ -99,10 +100,11 @@ public class RenderSystem implements RenderingSystem {
 
     // Apply camera transformation and render entities
     Graphics2D cameraTranformedG = cameraSystem.applyActiveCamera((Graphics2D) g.create());
-    renderEntities(cameraTranformedG);
 
-    // Render GameObjects
+    // Render all entity types
+    renderEntities(cameraTranformedG);
     renderGameObjects(cameraTranformedG);
+    renderSprites(cameraTranformedG);
 
     // Draw debug visualizations if enabled
     if (debugPhysics || debugColliders) {
@@ -260,6 +262,43 @@ public class RenderSystem implements RenderingSystem {
 
       entityG.dispose();
     });
+  }
+
+  /**
+   * Render sprite components
+   */
+  private void renderSprites(Graphics2D g) {
+    int renderedCount = 0;
+
+    for (var result : world.findEntitiesWith(Transform.class, SpriteComponent.class)) {
+      Transform transform = result.comp1();
+      SpriteComponent sprite = result.comp2();
+
+      // Skip if sprite is not visible or has no image
+      if (!sprite.isVisible() || sprite.getImage() == null) {
+        continue;
+      }
+
+      // Create a copy of the camera-transformed graphics for this entity
+      Graphics2D entityG = (Graphics2D) g.create();
+
+      // Apply entity's local transformations
+      entityG.translate(transform.getX(), transform.getY());
+      entityG.rotate(transform.getRotation());
+
+      // Fix: Apply scale with Y-component negated to correct the sprite orientation
+      entityG.scale(transform.getScaleX(), -transform.getScaleY());
+
+      // Render the sprite
+      sprite.render(entityG);
+      entityG.dispose();
+
+      renderedCount++;
+    }
+
+    if (renderedCount > 0) {
+      LOGGER.fine("Rendered " + renderedCount + " sprites");
+    }
   }
 
   /**

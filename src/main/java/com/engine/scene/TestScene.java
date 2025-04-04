@@ -2,6 +2,9 @@ package com.engine.scene;
 
 import java.awt.Color;
 
+import javax.inject.Inject;
+
+import com.engine.assets.AssetManager;
 import com.engine.entity.EntityFactory;
 
 /**
@@ -16,7 +19,7 @@ public class TestScene extends Scene {
 
   @Override
   public void update(double deltaTime) {
-   
+
   }
 
   @Override
@@ -26,7 +29,6 @@ public class TestScene extends Scene {
 
     // In our new coordinate system (Y+ is up), create ground near the bottom
     entityFactory.createGround(0, -300, 1800, 20, Color.GRAY);
-
     for (int i = 0; i < 30; i++) {
       // Create objects with negative Y values (below center)
       // Create red balls

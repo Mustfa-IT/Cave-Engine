@@ -14,6 +14,7 @@ import com.engine.ui.UISystem;
 import com.engine.events.EventSystem;
 import com.engine.events.GameEvent;
 import com.engine.assets.AssetManager;
+import com.engine.animation.AnimationSystem;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -81,13 +82,15 @@ public class GameEngine implements OverlayRenderer {
   // New systems
   private final EventSystem eventSystem;
   private final AssetManager assetManager;
+  private final AnimationSystem animationSystem;
 
   @Inject
   public GameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
       EntityFactory entityFactory, UISystem uiSystem,
       InputManager inputManager, Properties config,
-      EventSystem eventSystem, AssetManager assetManager) {
+      EventSystem eventSystem, AssetManager assetManager,
+      AnimationSystem animationSystem) {
     this.window = window;
     this.ecs = ecs;
     this.renderer = renderer;
@@ -99,6 +102,7 @@ public class GameEngine implements OverlayRenderer {
     this.config = config;
     this.eventSystem = eventSystem;
     this.assetManager = assetManager;
+    this.animationSystem = animationSystem;
 
     // Apply configuration
     this.targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
@@ -144,6 +148,7 @@ public class GameEngine implements OverlayRenderer {
       this.scheduler.schedule(() -> renderer.render());
       this.scheduler.schedule(() -> cameraSystem.update((float) this.scheduler.deltaTime()));
       this.scheduler.schedule(() -> uiSystem.update(this.scheduler.deltaTime()));
+      this.scheduler.schedule(() -> animationSystem.update(this.scheduler.deltaTime()));
 
       // Initialize FPS counter
       lastFpsReportTime = System.currentTimeMillis();
@@ -733,5 +738,14 @@ public class GameEngine implements OverlayRenderer {
    */
   public AssetManager getAssetManager() {
     return assetManager;
+  }
+
+  /**
+   * Get the animation system
+   *
+   * @return The animation system instance
+   */
+  public AnimationSystem getAnimationSystem() {
+    return animationSystem;
   }
 }

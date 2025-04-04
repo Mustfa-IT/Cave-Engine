@@ -16,6 +16,23 @@ import dev.dominion.ecs.api.Entity;
 /**
  * System for creating and managing UI elements.
  * Acts as a factory for UI elements and handles their events.
+ *
+ * <p>
+ * This class provides methods to create various UI components such as buttons,
+ * labels, panels, sliders, and debug overlays. It also handles mouse input
+ * events
+ * for these components and manages UI element states such as hover, focus, and
+ * drag.
+ * </p>
+ *
+ * <p>
+ * Usage example:
+ * </p>
+ * 
+ * <pre>
+ * UISystem uiSystem = new UISystem(gameWindow, ecsInstance);
+ * Entity button = uiSystem.createButton("Click Me", 100, 100, 200, 50);
+ * </pre>
  */
 public class UISystem {
   private static final Logger LOGGER = Logger.getLogger(UISystem.class.getName());
@@ -144,11 +161,20 @@ public class UISystem {
   }
 
   /**
-   * Set a callback for when a slider's value changes
+   * Set a callback for when a slider's value changes.
+   *
+   * @param sliderEntity The entity containing the slider UI component
+   * @param callback     A consumer function that will be called with the new
+   *                     value when the slider changes
+   * @throws NullPointerException if the callback is null
    */
   public void setSliderCallback(Entity sliderEntity, Consumer<Float> callback) {
     if (sliderEntity == null)
       return;
+
+    if (callback == null) {
+      throw new NullPointerException("Callback cannot be null");
+    }
 
     UIComponent uiComp = sliderEntity.get(UIComponent.class);
     if (uiComp != null && uiComp.getUi() instanceof Slider) {
@@ -157,11 +183,18 @@ public class UISystem {
   }
 
   /**
-   * Factory method to create a debug overlay
+   * Factory method to create a debug overlay for displaying performance metrics
+   * and debug information.
+   *
+   * @param x The x-coordinate of the top-left corner of the overlay
+   * @param y The y-coordinate of the top-left corner of the overlay
+   * @return An entity containing the debug overlay UI component, or null if
+   *         registration fails
+   * @see DebugOverlay
    */
   public Entity createDebugOverlay(float x, float y) {
     int overlayWidth = (int) (window.getWidth() * 0.2); // 20% of the window width
-    int overlayHeight = (int) (window.getHeight() * 0.15); // 15% of the window height
+    int overlayHeight = (int) (window.getHeight() * 0.20); // 15% of the window height
     DebugOverlay overlay = new DebugOverlay(x, y, overlayWidth, overlayHeight);
     Entity entity = ecs.createEntity(
         "ui_debug_overlay",

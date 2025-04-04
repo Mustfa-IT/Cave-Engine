@@ -21,6 +21,8 @@ import java.util.logging.Logger;
 import javax.imageio.ImageIO;
 import javax.inject.Singleton;
 
+import com.engine.animation.Animation;
+
 /**
  * Manages loading and caching of game assets like images, fonts, and sounds
  */
@@ -179,6 +181,55 @@ public class AssetManager {
   public void shutdown() {
     asyncLoader.shutdown();
     clearAssets();
+  }
+
+  /**
+   * Load a sprite sheet and create animations from it
+   *
+   * @param id            Base identifier for the animations
+   * @param path          Path to the sprite sheet image
+   * @param frameWidth    Width of each frame
+   * @param frameHeight   Height of each frame
+   * @param animationData Map of animation name to [frameStart, frameCount, fps,
+   *                      loop]
+   * @param columns       Number of columns in the sprite sheet
+   * @return Map of animation name to Animation object
+   */
+  public Map<String, Animation> loadSpriteSheet(String id, String path,
+      int frameWidth, int frameHeight,
+      Map<String, int[]> animationData,
+      int columns) {
+    BufferedImage sheet = loadImage(id + "_sheet", path);
+    if (sheet == null) {
+      return new HashMap<>();
+    }
+
+    Map<String, Animation> animations = new HashMap<>();
+
+    for (Map.Entry<String, int[]> entry : animationData.entrySet()) {
+      String animName = entry.getKey();
+      int[] data = entry.getValue();
+
+      if (data.length < 3) {
+        LOGGER.warning("Invalid animation data for " + animName);
+        continue;
+      }
+
+      int frameStart = data[0];
+      int frameCount = data[1];
+      float fps = data[2];
+      boolean loop = data.length > 3 ? data[3] != 0 : true;
+
+      Animation anim = Animation.fromSpriteSheet(
+          animName, sheet, frameWidth, frameHeight, frameCount,
+          (frameStart % columns) * frameWidth, (frameStart / columns) * frameHeight,
+          columns, fps, loop);
+
+      animations.put(animName, anim);
+      assets.put(id + "_anim_" + animName, anim);
+    }
+
+    return animations;
   }
 
   /**
