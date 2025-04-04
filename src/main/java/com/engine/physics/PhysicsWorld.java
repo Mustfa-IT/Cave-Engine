@@ -29,10 +29,14 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   private boolean debugPositions = true;
 
   @Inject
-  public PhysicsWorld(Vec2 gravity, Dominion ecs) {
+  public PhysicsWorld(Vec2 gravity, Dominion ecs, CollisionSystem collisionSystem) {
     // Box2D uses Y+ up, which now matches our coordinate system
     super(gravity); // No need to invert gravity anymore
     this.ecs = ecs;
+
+    // Register collision system as contact listener
+    setContactListener(collisionSystem);
+
     LOGGER.info("Physics world initialized with gravity: " + gravity.x + ", " + gravity.y);
     initializePhysicsBodies();
   }

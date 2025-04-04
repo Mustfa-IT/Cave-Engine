@@ -17,6 +17,9 @@ public class PhysicsBodyComponent {
   private float height;
   private boolean isTrigger;
   private String collisionLayer;
+  // Added fields for collision filtering
+  private short collisionCategory = 0x0001; // Default category
+  private short collisionMask = -1; // Collide with everything by default
 
   public PhysicsBodyComponent(BodyDef bodyDef, Shape shape, float density, float friction, float restitution) {
     this.bodyDef = bodyDef;
@@ -30,6 +33,10 @@ public class PhysicsBodyComponent {
     this.height = 0;
     this.isTrigger = false;
     this.collisionLayer = "default";
+
+    // Set default collision filtering
+    this.fixtureDef.filter.categoryBits = collisionCategory;
+    this.fixtureDef.filter.maskBits = collisionMask;
   }
 
   public Body getBody() {
@@ -78,5 +85,74 @@ public class PhysicsBodyComponent {
 
   public void setCollisionLayer(String collisionLayer) {
     this.collisionLayer = collisionLayer;
+  }
+
+  /**
+   * Set whether this body is a sensor (triggers collisions but has no physical
+   * response)
+   * 
+   * @param isSensor True if this body should be a sensor
+   */
+  public void setSensor(boolean isSensor) {
+    this.isTrigger = isSensor;
+    if (fixtureDef != null) {
+      fixtureDef.isSensor = isSensor;
+    }
+    if (body != null && body.getFixtureList() != null) {
+      body.getFixtureList().setSensor(isSensor);
+    }
+  }
+
+  /**
+   * Set the collision category bits (which collision group this body belongs to)
+   * 
+   * @param category The category bits
+   */
+  public void setCollisionCategory(short category) {
+    this.collisionCategory = category;
+    if (fixtureDef != null) {
+      fixtureDef.filter.categoryBits = category;
+    }
+    if (body != null && body.getFixtureList() != null) {
+      org.jbox2d.dynamics.Filter filter = body.getFixtureList().getFilterData();
+      filter.categoryBits = category;
+      body.getFixtureList().setFilterData(filter);
+    }
+  }
+
+  /**
+   * Set the collision mask bits (which collision groups this body should collide
+   * with)
+   * 
+   * @param mask The mask bits
+   */
+  public void setCollisionMask(short mask) {
+    this.collisionMask = mask;
+    if (fixtureDef != null) {
+      fixtureDef.filter.maskBits = mask;
+    }
+    if (body != null && body.getFixtureList() != null) {
+      org.jbox2d.dynamics.Filter filter = body.getFixtureList().getFilterData();
+      filter.maskBits = mask;
+      body.getFixtureList().setFilterData(filter);
+    }
+  }
+
+  /**
+   * Get the collision category bits
+   * 
+   * @return The category bits
+   */
+  public short getCollisionCategory() {
+    return collisionCategory;
+  }
+
+  /**
+   * Get the collision mask bits
+   * 
+   * @return The mask bits
+   */
+  public short getCollisionMask() {
+    return collisionMask;
   }
 }

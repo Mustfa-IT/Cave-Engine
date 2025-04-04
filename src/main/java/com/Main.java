@@ -10,6 +10,7 @@ import com.engine.di.DaggerEngineComponent;
 import com.engine.di.EngineComponent;
 import com.engine.di.EngineModule;
 import com.engine.gameobject.GameObject;
+import com.engine.physics.Collision;
 import com.engine.entity.EntityFactory;
 import com.engine.entity.EntityFactory.PhysicsParameters;
 import com.engine.scene.TestScene;
@@ -179,6 +180,7 @@ public class Main {
     public void onDestroy() {
       System.out.println("BouncingObject destroyed!");
     }
+
   }
 
   /**
@@ -206,6 +208,7 @@ public class Main {
     public void onDestroy() {
       System.out.println("ColorChangingBox destroyed!");
     }
+
   }
 
   /**

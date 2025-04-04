@@ -251,7 +251,7 @@ public class EntityFactory {
     // Physics body definition
     BodyDef bodyDef = new BodyDef();
     bodyDef.type = bodyType;
-    bodyDef.position = physicsWorld.toPhysicsWorld((float)transform.getX(),(float) transform.getY());
+    bodyDef.position = physicsWorld.toPhysicsWorld((float) transform.getX(), (float) transform.getY());
 
     // Physics shape
     PolygonShape shape = new PolygonShape();
@@ -291,7 +291,7 @@ public class EntityFactory {
     // Physics body definition
     BodyDef bodyDef = new BodyDef();
     bodyDef.type = bodyType;
-    bodyDef.position = physicsWorld.toPhysicsWorld((float)transform.getX(),(float) transform.getY());
+    bodyDef.position = physicsWorld.toPhysicsWorld((float) transform.getX(), (float) transform.getY());
 
     // Physics shape
     CircleShape shape = new CircleShape();
@@ -327,6 +327,20 @@ public class EntityFactory {
             physicsParams.bodyType, physicsParams.density,
             physicsParams.friction, physicsParams.restitution);
       }
+
+      // Apply collision filtering settings if specified
+      PhysicsBodyComponent physicsComponent = entity.get(PhysicsBodyComponent.class);
+      if (physicsComponent != null) {
+        if (physicsParams.isSensor) {
+          physicsComponent.setSensor(true);
+        }
+        if (physicsParams.collisionCategory != 0) {
+          physicsComponent.setCollisionCategory(physicsParams.collisionCategory);
+        }
+        if (physicsParams.collisionMask != 0) {
+          physicsComponent.setCollisionMask(physicsParams.collisionMask);
+        }
+      }
     }
 
     return entity;
@@ -343,6 +357,10 @@ public class EntityFactory {
     private final float friction;
     private final float restitution;
     private final boolean isCircle;
+    // New collision properties
+    private boolean isSensor = false;
+    private short collisionCategory = 0x0001; // Default category
+    private short collisionMask = -1; // Collide with everything by default
 
     /**
      * Create box physics parameters
@@ -369,6 +387,40 @@ public class EntityFactory {
       this.friction = friction;
       this.restitution = restitution;
       this.isCircle = isCircle;
+    }
+
+    /**
+     * Set this body as a sensor (triggers collisions but has no physical response)
+     * 
+     * @param isSensor True if this body should be a sensor
+     * @return This parameters instance for method chaining
+     */
+    public PhysicsParameters setSensor(boolean isSensor) {
+      this.isSensor = isSensor;
+      return this;
+    }
+
+    /**
+     * Set the collision category bits (which collision group this body belongs to)
+     * 
+     * @param category The category bits
+     * @return This parameters instance for method chaining
+     */
+    public PhysicsParameters setCollisionCategory(short category) {
+      this.collisionCategory = category;
+      return this;
+    }
+
+    /**
+     * Set the collision mask bits (which collision groups this body should collide
+     * with)
+     * 
+     * @param mask The mask bits
+     * @return This parameters instance for method chaining
+     */
+    public PhysicsParameters setCollisionMask(short mask) {
+      this.collisionMask = mask;
+      return this;
     }
   }
 }
