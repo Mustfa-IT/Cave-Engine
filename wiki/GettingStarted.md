@@ -27,53 +27,51 @@ Here's a minimal example to get started:
 
 ```java
 import com.engine.core.GameEngine;
-import com.engine.di.DaggerEngineComponent;
-import com.engine.di.EngineComponent;
-import com.engine.di.EngineModule;
 import com.engine.scene.SimpleScene;
 
 public class MyGame {
-    private GameEngine engine;
+  private GameEngine engine;
 
-    public MyGame() {
-        // Create the engine using DI
-        engine = GameEngine.createEngine();
+  public MyGame() {
+    // Create the engine using DI
+    engine = GameEngine.createEngine();
 
-        // Configure the engine with fluent API
-        engine.configure(config -> config
-            .targetFps(60)
-            .showPerformanceStats(true)
-            .debugMode(false, true, true)
-            .gravity(0, -9.8f)
-            .windowTitle("My CaveEngine Game"))
-            .createCamera(0, 0, 1.0f)
-            .createScene("main", () -> new SimpleScene(engine.getEntityFactory()))
-            .createDebugOverlay();
+    // Configure the engine with fluent API
+    engine.configure(config -> config
+        .targetFps(60)
+        .showPerformanceStats(true)
+        .debugMode(false, true, true)
+        .gravity(0, -9.8f)
+        .windowTitle("My CaveEngine Game"))
+        .createCamera(0, 0, 1.0f)
+        .createScene("main", () -> new SimpleScene(engine.getEntityFactory()))
+        .createDebugOverlay();
 
-        // Set active scene
-        engine.setActiveScene("main");
+    // Set active scene
+    engine.setActiveScene("main");
 
-        // Create UI elements
-        setupUI();
+    // Create UI elements
+    setupUI();
 
-        // Start the game loop
-        engine.start();
-    }
+    // Start the game loop
+    engine.start();
+  }
 
-    private void setupUI() {
-        var uiSystem = engine.getUiSystem();
+  private void setupUI() {
+    var uiSystem = engine.getUiSystem();
 
-        // Create a button
-        uiSystem.createButton("Click Me", 350, 200, 100, 40);
+    // Create a button
+    uiSystem.createButton("Click Me", 350, 200, 100, 40);
 
-        // Create a label
-        uiSystem.createLabel("Hello World", 350, 100);
-    }
+    // Create a label
+    uiSystem.createLabel("Hello World", 350, 100);
+  }
 
-    public static void main(String[] args) {
-        new MyGame();
-    }
+  public static void main(String[] args) {
+    new MyGame();
+  }
 }
+
 ```
 
 ## Next Steps
