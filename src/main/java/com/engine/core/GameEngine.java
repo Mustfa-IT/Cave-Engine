@@ -37,7 +37,6 @@ import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-
 @Singleton
 public class GameEngine implements OverlayRenderer {
   // Logger for better debugging
@@ -53,6 +52,7 @@ public class GameEngine implements OverlayRenderer {
   private boolean debugColliders = false;
   private boolean debugGrid = true;
 
+  private final GameFrame gameFrame;
   private final GameWindow window;
   private State engineState = State.INITIALIZED;
   private final Dominion ecs;
@@ -87,13 +87,14 @@ public class GameEngine implements OverlayRenderer {
   private final AnimationSystem animationSystem;
 
   @Inject
-  public GameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
+  public GameEngine(GameFrame gameFrame, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
       EntityFactory entityFactory, UISystem uiSystem,
       InputManager inputManager, EngineConfig config,
       EventSystem eventSystem, AssetManager assetManager,
       AnimationSystem animationSystem) {
-    this.window = window;
+    this.gameFrame = gameFrame;
+    this.window = new GameWindow();
     this.ecs = ecs;
     this.renderer = renderer;
     this.cameraSystem = cameraSystem;
@@ -110,12 +111,6 @@ public class GameEngine implements OverlayRenderer {
     this.debugPhysics = this.config.isDebugPhysics();
     this.targetFps = this.config.getTargetFps();
 
-    this.window.setOnClose(() -> {
-      stop();
-      this.closedByWindow = true;
-      return null;
-    });
-
     // Tell the renderer about this engine so it can call renderOverlays
     renderer.setOverlayRenderer(this);
 
@@ -130,12 +125,17 @@ public class GameEngine implements OverlayRenderer {
   private void init() {
     try {
       // Set up the window resize handler
-      this.window.setOnResize((width, height) -> {
+      this.gameFrame.setOnResize((width, height) -> {
         cameraSystem.updateAllViewports(width, height);
       });
 
+      // Don't need these lines anymore as they're handled in the EngineModule
+      // window.add(gameFrame);
+      // window.setLocationRelativeTo(null);
+      // window.setDefaultCloseOperation(GameWindow.DISPOSE_ON_CLOSE);
+
       // Create camera at world origin (0,0)
-      this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 0, 0);
+      this.cameraSystem.createCamera(gameFrame.getWidth(), gameFrame.getHeight(), 0, 0);
       // Create scene manager with reference to engine, entity factory, and UI system
       this.sceneManager = new SceneManager(this, entityFactory, uiSystem);
 
@@ -315,8 +315,8 @@ public class GameEngine implements OverlayRenderer {
     if (engineState == State.RUNNING)
       return this;
     engineState = State.RUNNING;
-    this.window.initialize();
-    this.cameraSystem.updateAllViewports(window.getWidth(), window.getHeight());
+    this.gameFrame.initialize();
+    this.cameraSystem.updateAllViewports(gameFrame.getWidth(), gameFrame.getHeight());
     this.setDebugDisplay(debugPhysics, debugColliders, this.debugGrid);
     LOGGER.info("Starting the Game Engine with target FPS: " + targetFps);
     scheduler.tickAtFixedRate(targetFps); // Start scheduler at target FPS
@@ -342,8 +342,8 @@ public class GameEngine implements OverlayRenderer {
     Runtime.getRuntime().addShutdownHook(hook);
   }
 
-  public GameWindow getWindow() {
-    return window;
+  public GameFrame getGameFrame() {
+    return gameFrame;
   }
 
   public boolean isRunning() {
@@ -426,7 +426,7 @@ public class GameEngine implements OverlayRenderer {
     if (debugOverlay != null && debugOverlay.isVisible()) {
       // Update FPS
       debugOverlay.updateStat("FPS", averageFps);
-      debugOverlay.updateStat("Gravity",this.config.getGravity().toString());
+      debugOverlay.updateStat("Gravity", this.config.getGravity().toString());
       // // Update entity count
       // int entityCount = ecs.findEntitiesWith().count();
       // debugOverlay.updateStat("Entities", entityCount);
@@ -530,7 +530,7 @@ public class GameEngine implements OverlayRenderer {
    */
   public boolean takeScreenshot(String filePath) {
     try {
-      BufferedImage image = window.captureScreen();
+      BufferedImage image = gameFrame.captureScreen();
       if (image != null) {
         File outputFile = new File(filePath);
         ImageIO.write(image, "png", outputFile);
@@ -552,7 +552,7 @@ public class GameEngine implements OverlayRenderer {
    * @return this GameEngine instance for method chaining
    */
   public GameEngine createCamera(float x, float y, float zoom) {
-    Entity camera = cameraSystem.createCamera(window.getWidth(), window.getHeight(), x, y);
+    Entity camera = cameraSystem.createCamera(gameFrame.getWidth(), gameFrame.getHeight(), x, y);
     CameraComponent camComponent = camera.get(CameraComponent.class);
     if (camComponent != null) {
       camComponent.setZoom(zoom);
@@ -587,7 +587,7 @@ public class GameEngine implements OverlayRenderer {
    */
   public GameEngine transitionToScene(String sceneName, int fadeDurationMs) {
     // Create temporary fade overlay UI
-    Entity fadeOverlay = uiSystem.createPanel(0, 0, window.getWidth(), window.getHeight());
+    Entity fadeOverlay = uiSystem.createPanel(0, 0, gameFrame.getWidth(), gameFrame.getHeight());
     UIComponent uiComp = fadeOverlay.get(UIComponent.class);
 
     // Fade out (if fadeDurationMs > 0)
@@ -665,7 +665,7 @@ public class GameEngine implements OverlayRenderer {
   @Override
   public void renderOverlays(Graphics2D g) {
     if (console != null && console.isVisible()) {
-      console.render(g, window.getWidth());
+      console.render(g, gameFrame.getWidth());
     }
   }
 

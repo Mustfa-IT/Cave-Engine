@@ -14,6 +14,7 @@ import org.jbox2d.common.Vec2;
 import com.engine.core.CameraSystem;
 import com.engine.core.EngineConfig;
 import com.engine.core.GameEngine;
+import com.engine.core.GameFrame;
 import com.engine.core.GameWindow;
 import com.engine.entity.EntityFactory;
 import com.engine.graph.OverlayRenderer;
@@ -86,11 +87,24 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public GameWindow provideGameWindow(Properties config) {
-      int width = Integer.parseInt(config.getProperty("window.width", "1200"));
-      int height = Integer.parseInt(config.getProperty("window.height", "800"));
+    public GameFrame provideGameWindow(Properties config) {
+      int width = Integer.parseInt(config.getProperty("window.width", "800"));
+      int height = Integer.parseInt(config.getProperty("window.height", "600"));
       String title = config.getProperty("window.title", "Physics Game");
-      return new GameWindow(title, width, height);
+
+      // Create the frame with dimensions
+      GameFrame gameFrame = new GameFrame(title, width, height);
+
+      // Create a window to hold the canvas
+      GameWindow window = new GameWindow();
+      window.add(gameFrame);
+      window.setTitle(title);
+      window.setSize(width, height);
+      window.setLocationRelativeTo(null);
+      window.setDefaultCloseOperation(GameWindow.DISPOSE_ON_CLOSE);
+      window.setVisible(true); // Make the window visible right away
+
+      return gameFrame;
     }
 
     @Provides
@@ -107,7 +121,7 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public UISystem provideUISystem(GameWindow window, Dominion ecs, EventSystem evnetSystem) {
+    public UISystem provideUISystem(GameFrame window, Dominion ecs, EventSystem evnetSystem) {
       return new UISystem(window, ecs, evnetSystem);
     }
 
@@ -119,13 +133,13 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public InputManager provideInputManager(GameWindow window, CameraSystem cameraSystem) {
+    public InputManager provideInputManager(GameFrame window, CameraSystem cameraSystem) {
       return new InputManager(window, cameraSystem);
     }
 
     @Provides
     @Singleton
-    public RenderSystem provideRenderSystem(GameWindow window, Dominion ecs, CameraSystem cameraSystem) {
+    public RenderSystem provideRenderSystem(GameFrame window, Dominion ecs, CameraSystem cameraSystem) {
       return new RenderSystem(window, ecs, cameraSystem);
     }
 
@@ -185,13 +199,13 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
+    public GameEngine provideGameEngine(GameFrame gameFrame, Dominion ecs, RenderSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, EngineConfig config,
         EventSystem eventSystem, AssetManager assetManager,
         AnimationSystem animationSystem) {
-      GameEngine engine = new GameEngine(window, ecs, renderer, cameraSystem,
+      GameEngine engine = new GameEngine(gameFrame, ecs, renderer, cameraSystem,
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
           config, eventSystem, assetManager, animationSystem);
 

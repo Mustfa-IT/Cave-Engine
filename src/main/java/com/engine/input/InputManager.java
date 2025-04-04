@@ -16,7 +16,7 @@ import java.util.function.Function;
 import java.util.logging.Logger;
 
 import com.engine.core.CameraSystem;
-import com.engine.core.GameWindow;
+import com.engine.core.GameFrame;
 
 /**
  * Centralized input handling system for keyboard and mouse events
@@ -24,7 +24,7 @@ import com.engine.core.GameWindow;
 public class InputManager {
   private static final Logger LOGGER = Logger.getLogger(InputManager.class.getName());
 
-  private final GameWindow window;
+  private final GameFrame window;
   private final CameraSystem cameraSystem;
 
   // Track key states (pressed or not)
@@ -46,7 +46,7 @@ public class InputManager {
   private final List<Function<KeyEvent, Boolean>> keyListeners = new ArrayList<>();
   private final List<Function<KeyEvent, Boolean>> keyTypedListeners = new ArrayList<>();
 
-  public InputManager(GameWindow window, CameraSystem cameraSystem) {
+  public InputManager(GameFrame window, CameraSystem cameraSystem) {
     this.window = window;
     this.cameraSystem = cameraSystem;
     setupListeners();

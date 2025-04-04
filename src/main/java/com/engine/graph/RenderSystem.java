@@ -22,7 +22,7 @@ import com.engine.components.Transform;
 import com.engine.components.UIComponent;
 import com.engine.components.GameObjectComponent;
 import com.engine.core.CameraSystem;
-import com.engine.core.GameWindow;
+import com.engine.core.GameFrame;
 import com.engine.physics.BoxCollider;
 import com.engine.physics.CircleCollider;
 import com.engine.physics.PolygonCollider;
@@ -32,7 +32,7 @@ import dev.dominion.ecs.api.Entity;
 
 @Singleton
 public class RenderSystem implements RenderingSystem {
-  private final GameWindow window;
+  private final GameFrame window;
   private final Dominion world;
   private final CameraSystem cameraSystem;
   private static final Logger LOGGER = Logger.getLogger(RenderSystem.class.getName());
@@ -44,13 +44,12 @@ public class RenderSystem implements RenderingSystem {
   private OverlayRenderer overlayRenderer;
 
   @Inject
-  public RenderSystem(GameWindow window, Dominion world, CameraSystem cameraSystem) {
+  public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem) {
     this.cameraSystem = cameraSystem;
     this.window = window;
     this.world = world;
-    // Ensure the window is visible before creating the BufferStrategy
-    window.initialize();
-    window.createBufferStrategy(2);
+    // Window is already initialized and visible at this point
+    // Don't create buffer strategy in constructor
   }
 
   /**
@@ -77,6 +76,17 @@ public class RenderSystem implements RenderingSystem {
    * Renders all registered renderable objects.
    */
   public void render() {
+    // Create the buffer strategy lazily on first render
+    if (window.getBufferStrategy() == null) {
+      try {
+        window.createBufferStrategy(2);
+        return; // Skip this frame, buffer strategy will be ready next time
+      } catch (IllegalStateException e) {
+        LOGGER.warning("Failed to create buffer strategy, component may not be showing yet: " + e.getMessage());
+        return;
+      }
+    }
+
     BufferStrategy bs = window.getBufferStrategy();
     if (bs == null) {
       return;
@@ -372,7 +382,8 @@ public class RenderSystem implements RenderingSystem {
       world.findEntitiesWith(Transform.class, PhysicsBodyComponent.class).forEach(result -> {
         Transform transform = result.comp1();
         PhysicsBodyComponent physics = result.comp2();
-        if(transform == null || physics ==null || physics.getBody() == null) return;
+        if (transform == null || physics == null || physics.getBody() == null)
+          return;
         // Get a separate graphics context
         Graphics2D debugG = (Graphics2D) g.create();
 
@@ -460,8 +471,8 @@ public class RenderSystem implements RenderingSystem {
             // Display collision filtering info
             // TOO MUCH LOAD
             // String filterInfo = String.format("C:%04X M:%04X",
-            //     physics.getCollisionCategory(),
-            //     physics.getCollisionMask());
+            // physics.getCollisionCategory(),
+            // physics.getCollisionMask());
             // debugG.setFont(new Font("Monospaced", Font.PLAIN, 10));
             // debugG.setColor(Color.BLACK);
             // debugG.drawString(filterInfo, -20, 20);

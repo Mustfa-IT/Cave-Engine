@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
-import com.engine.core.GameWindow;
+import com.engine.core.GameFrame;
 import com.engine.entity.EntityRegistrar;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
@@ -41,7 +41,7 @@ import dev.dominion.ecs.api.Entity;
  */
 public class UISystem {
   private static final Logger LOGGER = Logger.getLogger(UISystem.class.getName());
-  private final GameWindow window;
+  private final GameFrame window;
   private final Dominion ecs;
   private final EventSystem eventSystem;
   private EntityRegistrar currentRegistrar;
@@ -50,7 +50,7 @@ public class UISystem {
   private UIElement draggedElement;
 
   @Inject
-  public UISystem(GameWindow window, Dominion ecs, EventSystem eventSystem) {
+  public UISystem(GameFrame window, Dominion ecs, EventSystem eventSystem) {
     this.window = window;
     this.ecs = ecs;
     this.eventSystem = eventSystem;
