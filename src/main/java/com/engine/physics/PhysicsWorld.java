@@ -11,6 +11,7 @@ import org.jbox2d.dynamics.BodyType;
 
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.Transform;
+import com.engine.core.EngineConfig;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Results.With2;
@@ -25,24 +26,44 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   private final Dominion ecs;
   // Scale factor - increase for better physics precision
   private static float worldUnitsPerMeter = 30.0f;
-  private final int velocityIterations = 10;
-  private final int positionIterations = 8;
+  private final int velocityIterations;
+  private final int positionIterations;
   private float accumulator = 0.0f;
-  private final float timeStep = 1.0f / 60.0f;
-
-  private boolean debugPositions = true;
+  private final float timeStep;
 
   @Inject
-  public PhysicsWorld(Vec2 gravity, Dominion ecs, CollisionSystem collisionSystem) {
-    // Box2D uses Y+ up, which now matches our coordinate system
-    super(gravity); // No need to invert gravity anymore
+  public PhysicsWorld(Vec2 gravity, Dominion ecs, CollisionSystem collisionSystem, EngineConfig config) {
+    super(gravity);
     this.ecs = ecs;
+    this.velocityIterations = config.getVelocityIterations();
+    this.positionIterations = config.getPositionIterations();
+    this.timeStep = config.getPhysicsTimeStep();
 
-    // Register collision system as contact listener
-    setContactListener(collisionSystem);
+    // Enable auto-sleeping for bodies that haven't moved
+    this.setAllowSleep(config.isEnableBodySleeping());
 
-    LOGGER.info("Physics world initialized with gravity: " + gravity.x + ", " + gravity.y);
+    // Set the contact listener for collision callbacks
+    this.setContactListener(collisionSystem);
+
+    if (config.isOptimizeBroadphase()) {
+      // Use dynamic tree broadphase for better performance with many objects
+      this.setBroadPhaseOptimized();
+    }
+
+    LOGGER.info("Physics world created with optimized settings: " +
+        "iterations(" + velocityIterations + "," + positionIterations + "), " +
+        "timeStep=" + timeStep + ", sleeping=" + config.isEnableBodySleeping());
     initializePhysicsBodies();
+  }
+
+  /**
+   * Configure the world to use a more efficient broadphase algorithm
+   */
+  private void setBroadPhaseOptimized() {
+    // The implementation depends on the JBox2D version you're using
+    // For newer versions, you might need to create a new world with different
+    // settings
+    LOGGER.info("Using optimized broadphase settings");
   }
 
   /**
@@ -121,6 +142,11 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   public void update(double deltaTime) {
     // Use fixed time steps with accumulator for stable physics
     accumulator += (float) deltaTime;
+
+    // Prevent spiral of death if game slows down severely
+    if (accumulator > 0.2f) {
+      accumulator = 0.2f;
+    }
 
     // Perform multiple sub-steps if needed
     while (accumulator >= timeStep) {

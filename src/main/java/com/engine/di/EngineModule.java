@@ -11,6 +11,7 @@ import javax.inject.Singleton;
 import org.jbox2d.common.Vec2;
 
 import com.engine.core.CameraSystem;
+import com.engine.core.EngineConfig;
 import com.engine.core.GameEngine;
 import com.engine.core.GameWindow;
 import com.engine.entity.EntityFactory;
@@ -151,6 +152,28 @@ public abstract class EngineModule {
     @Singleton
     public AnimationSystem provideAnimationSystem(Dominion ecs) {
       return new AnimationSystem(ecs);
+    }
+
+    @Provides
+    @Singleton
+    public EngineConfig provideEngineConfig() {
+      EngineConfig engineConfig = new EngineConfig();
+
+      // Set default values from properties file or use hardcoded defaults
+      engineConfig.physicsIterations(
+          Integer.parseInt(config.getProperty("physics.velocityIterations", "10")),
+          Integer.parseInt(config.getProperty("physics.positionIterations", "8")));
+
+      engineConfig.physicsTimeStep(
+          Float.parseFloat(config.getProperty("physics.timeStep", "0.016667")));
+
+      engineConfig.enableBodySleeping(
+          Boolean.parseBoolean(config.getProperty("physics.enableSleeping", "true")));
+
+      engineConfig.broadphaseOptimization(
+          Boolean.parseBoolean(config.getProperty("physics.optimizeBroadphase", "false")));
+
+      return engineConfig;
     }
 
     @Provides

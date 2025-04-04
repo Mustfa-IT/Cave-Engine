@@ -21,7 +21,7 @@ public class Main {
     // Create assets directory if it doesn't exist
     File assetsDir = new File("assets");
     if (!assetsDir.exists() && !assetsDir.mkdirs()) {
-        System.err.println("Failed to create assets directory.");
+      System.err.println("Failed to create assets directory.");
     }
 
     // Use Dagger to create the engine with simplified initialization
@@ -31,9 +31,14 @@ public class Main {
     game.configure(config -> config
         .targetFps(100)
         .showPerformanceStats(true)
-        .debugMode(false, true, true)
+        .debugMode(false, false, false) // Turned off collider debugging to improve performance
         .gravity(0, -9.8f)
-        .windowTitle("Enhanced Physics Engine"))
+        .windowTitle("Enhanced Physics Engine")
+        // Physics optimization settings
+        .physicsIterations(6, 2) // Reduced from default (typically 10, 8)
+        .physicsTimeStep(1 / 45f) // Slightly larger step (less accuracy, better performance)
+        .enableBodySleeping(true)
+        .broadphaseOptimization(true))
         .createCamera(0, 0, 1.0f)
         .createScene("test", () -> new SimpleScene(game.getEntityFactory()))
         .createDebugOverlay(); // Add debug overlay
@@ -67,11 +72,11 @@ public class Main {
 
     // Listen for game paused/resumed
     eventSystem.addEventListener("game:pause", event -> {
-      System.out.println("Game paused");
+      System.out.println("Main Game paused");
     });
 
     eventSystem.addEventListener("game:resume", event -> {
-      System.out.println("Game resumed");
+      System.out.println("Main Game resumed");
     });
 
     // Fire an event when the game starts
@@ -114,11 +119,13 @@ public class Main {
 
     // // Create custom GameObject on click at world position
     // inputManager.onMousePress(1, e -> {
-    //   float[] worldPos = inputManager.getMouseWorldPosition();
-    //   System.out.println("Mouse clicked at world position: " + worldPos[0] + ", " + worldPos[1]);
+    // float[] worldPos = inputManager.getMouseWorldPosition();
+    // System.out.println("Mouse clicked at world position: " + worldPos[0] + ", " +
+    // worldPos[1]);
 
-    //   // Create a custom GameObject at click position
-    //   entityFactory.createGameObject(worldPos[0], worldPos[1], new RotatingSquare(50, Color.YELLOW));
+    // // Create a custom GameObject at click position
+    // entityFactory.createGameObject(worldPos[0], worldPos[1], new
+    // RotatingSquare(50, Color.YELLOW));
     // });
 
     // Create physics GameObject with right click (using new component-based
