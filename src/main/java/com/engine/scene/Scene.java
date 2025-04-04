@@ -7,6 +7,7 @@ import java.util.logging.Logger;
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.UIComponent;
+import com.engine.components.GameObjectComponent;
 import com.engine.core.GameEngine;
 import com.engine.entity.EntityFactory;
 import com.engine.entity.EntityRegistrar;
@@ -139,6 +140,19 @@ public abstract class Scene implements EntityRegistrar {
     } catch (Exception e) {
       // Just log and continue
       LOGGER.fine("Could not clean up physics component: " + e.getMessage());
+    }
+
+    // Clean up GameObject component
+    try {
+      GameObjectComponent gameObjectComponent = entity.get(GameObjectComponent.class);
+      if (gameObjectComponent != null && gameObjectComponent.getGameObject() != null) {
+        // Call markDestroyed to properly flag the component and call onDestroy
+        gameObjectComponent.markDestroyed();
+        LOGGER.fine("GameObject marked as destroyed");
+      }
+    } catch (Exception e) {
+      // Just log and continue
+      LOGGER.fine("Could not clean up GameObject component: " + e.getMessage());
     }
 
     // Clean up UI component

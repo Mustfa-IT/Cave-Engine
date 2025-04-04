@@ -14,9 +14,10 @@ import org.jbox2d.dynamics.BodyType;
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
+import com.engine.components.GameObjectComponent;
 import com.engine.graph.Circle;
 import com.engine.graph.Rect;
-
+import com.engine.gameobject.GameObject;
 import com.engine.physics.PhysicsWorld;
 
 import dev.dominion.ecs.api.Dominion;
@@ -154,5 +155,220 @@ public class EntityFactory {
 
     System.out.println("Created rectangle at: " + x + "," + y + " with size: " + width + "x" + height);
     return registerWithRegistrar(entity).toString();
+  }
+
+  /**
+   * Creates a custom game object entity
+   *
+   * @param x          X coordinate in world space
+   * @param y          Y coordinate in world space
+   * @param gameObject Custom GameObject implementation
+   * @return Entity ID
+   */
+  public Entity createGameObject(float x, float y, GameObject gameObject) {
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
+    String entityId = "gameobject-" + Math.round(Math.random() * 10000);
+
+    Entity entity = ecs.createEntity(
+        entityId,
+        transform,
+        new GameObjectComponent(gameObject));
+
+    System.out.println("Created custom GameObject at: " + x + "," + y);
+    return registerWithRegistrar(entity);
+  }
+
+  /**
+   * Creates a custom physics game object
+   *
+   * @param x           X coordinate in world space
+   * @param y           Y coordinate in world space
+   * @param width       Width of the physics body
+   * @param height      Height of the physics body
+   * @param gameObject  Custom GameObject implementation
+   * @param bodyType    Physics body type (DYNAMIC, STATIC, KINEMATIC)
+   * @param density     Physics density
+   * @param friction    Physics friction
+   * @param restitution Physics restitution (bounciness)
+   * @return Entity ID
+   */
+  public String createPhysicsGameObject(float x, float y, float width, float height,
+      GameObject gameObject, BodyType bodyType,
+      float density, float friction, float restitution) {
+    // Physics body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = bodyType;
+    bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+
+    // Physics shape
+    PolygonShape shape = new PolygonShape();
+    physicsWorld.setBoxShape(shape, width / 2, height / 2);
+
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, 0, 1, 1);
+
+    // Create entity with random ID
+    String entityId = "physics-gameobject-" + Math.round(Math.random() * 10000);
+
+    Entity entity = ecs.createEntity(
+        entityId,
+        transform,
+        new GameObjectComponent(gameObject),
+        new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
+
+    System.out.println("Created physics GameObject at: " + x + "," + y);
+    return registerWithRegistrar(entity).toString();
+  }
+
+  /**
+   * Add a box physics body to an existing entity
+   *
+   * @param entity      The entity to add physics to
+   * @param width       Width of the physics body
+   * @param height      Height of the physics body
+   * @param bodyType    Physics body type (DYNAMIC, STATIC, KINEMATIC)
+   * @param density     Physics density
+   * @param friction    Physics friction
+   * @param restitution Physics restitution (bounciness)
+   * @return The updated entity
+   */
+  public Entity addBoxPhysics(Entity entity, float width, float height,
+      BodyType bodyType, float density, float friction, float restitution) {
+    if (entity == null) {
+      LOGGER.warning("Cannot add physics to null entity");
+      return null;
+    }
+
+    Transform transform = entity.get(Transform.class);
+    if (transform == null) {
+      LOGGER.warning("Cannot add physics to entity without Transform");
+      return entity;
+    }
+
+    // Physics body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = bodyType;
+    bodyDef.position = physicsWorld.toPhysicsWorld((float)transform.getX(),(float) transform.getY());
+
+    // Physics shape
+    PolygonShape shape = new PolygonShape();
+    physicsWorld.setBoxShape(shape, width / 2, height / 2);
+
+    // Add physics component to entity
+    entity.add(new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
+
+    System.out.println("Added box physics to entity at: " + transform.getX() + "," + transform.getY());
+    return entity;
+  }
+
+  /**
+   * Add a circle physics body to an existing entity
+   *
+   * @param entity      The entity to add physics to
+   * @param radius      Radius of the physics circle
+   * @param bodyType    Physics body type (DYNAMIC, STATIC, KINEMATIC)
+   * @param density     Physics density
+   * @param friction    Physics friction
+   * @param restitution Physics restitution (bounciness)
+   * @return The updated entity
+   */
+  public Entity addCirclePhysics(Entity entity, float radius,
+      BodyType bodyType, float density, float friction, float restitution) {
+    if (entity == null) {
+      LOGGER.warning("Cannot add physics to null entity");
+      return null;
+    }
+
+    Transform transform = entity.get(Transform.class);
+    if (transform == null) {
+      LOGGER.warning("Cannot add physics to entity without Transform");
+      return entity;
+    }
+
+    // Physics body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = bodyType;
+    bodyDef.position = physicsWorld.toPhysicsWorld((float)transform.getX(),(float) transform.getY());
+
+    // Physics shape
+    CircleShape shape = new CircleShape();
+    shape.setRadius(physicsWorld.toPhysicsWorld(radius));
+
+    // Add physics component to entity
+    entity.add(new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
+
+    System.out.println("Added circle physics to entity at: " + transform.getX() + "," + transform.getY());
+    return entity;
+  }
+
+  /**
+   * Creates a physics-enabled GameObject entity with specified parameters
+   *
+   * @param x          X coordinate in world space
+   * @param y          Y coordinate in world space
+   * @param gameObject Custom GameObject implementation
+   * @return Created entity
+   */
+  public Entity createGameObject(float x, float y, GameObject gameObject, PhysicsParameters physicsParams) {
+    // First create the basic GameObject entity
+    Entity entity = createGameObject(x, y, gameObject);
+
+    // Add physics if parameters are provided
+    if (physicsParams != null) {
+      if (physicsParams.isCircle) {
+        addCirclePhysics(entity, physicsParams.width / 2,
+            physicsParams.bodyType, physicsParams.density,
+            physicsParams.friction, physicsParams.restitution);
+      } else {
+        addBoxPhysics(entity, physicsParams.width, physicsParams.height,
+            physicsParams.bodyType, physicsParams.density,
+            physicsParams.friction, physicsParams.restitution);
+      }
+    }
+
+    return entity;
+  }
+
+  /**
+   * Represents physics parameters for creating physics-enabled GameObjects
+   */
+  public static class PhysicsParameters {
+    private final BodyType bodyType;
+    private final float width;
+    private final float height;
+    private final float density;
+    private final float friction;
+    private final float restitution;
+    private final boolean isCircle;
+
+    /**
+     * Create box physics parameters
+     */
+    public static PhysicsParameters box(float width, float height, BodyType bodyType,
+        float density, float friction, float restitution) {
+      return new PhysicsParameters(width, height, bodyType, density, friction, restitution, false);
+    }
+
+    /**
+     * Create circle physics parameters
+     */
+    public static PhysicsParameters circle(float diameter, BodyType bodyType,
+        float density, float friction, float restitution) {
+      return new PhysicsParameters(diameter, diameter, bodyType, density, friction, restitution, true);
+    }
+
+    private PhysicsParameters(float width, float height, BodyType bodyType,
+        float density, float friction, float restitution, boolean isCircle) {
+      this.width = width;
+      this.height = height;
+      this.bodyType = bodyType;
+      this.density = density;
+      this.friction = friction;
+      this.restitution = restitution;
+      this.isCircle = isCircle;
+    }
   }
 }

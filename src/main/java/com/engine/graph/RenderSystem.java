@@ -15,6 +15,7 @@ import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
+import com.engine.components.GameObjectComponent;
 import com.engine.core.CameraSystem;
 import com.engine.core.GameEngine;
 import com.engine.core.GameWindow;
@@ -92,6 +93,9 @@ public class RenderSystem implements RenderingSystem {
     // Apply camera transformation and render entities
     Graphics2D cameraTranformedG = cameraSystem.applyActiveCamera((Graphics2D) g.create());
     renderEntities(cameraTranformedG);
+
+    // Render GameObjects
+    renderGameObjects(cameraTranformedG);
 
     // Draw debug visualizations if enabled
     if (debugPhysics || debugColliders) {
@@ -207,6 +211,34 @@ public class RenderSystem implements RenderingSystem {
 
         entityG.dispose();
       }
+    });
+  }
+
+  /**
+   * Renders custom GameObjects
+   */
+  private void renderGameObjects(Graphics2D g) {
+    world.findEntitiesWith(Transform.class, GameObjectComponent.class).forEach(result -> {
+      Transform transform = result.comp1();
+      GameObjectComponent gameObjectComp = result.comp2();
+
+      // Skip if the GameObject has been destroyed
+      if (gameObjectComp.isDestroyed()) {
+        return;
+      }
+
+      // Create a copy of the camera-transformed graphics for this entity
+      Graphics2D entityG = (Graphics2D) g.create();
+
+      // Apply entity's local transformations
+      entityG.translate(transform.getX(), transform.getY());
+      entityG.rotate(transform.getRotation());
+      entityG.scale(transform.getScaleX(), transform.getScaleY());
+
+      // Let the GameObject render itself
+      gameObjectComp.getGameObject().render(entityG);
+
+      entityG.dispose();
     });
   }
 

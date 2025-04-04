@@ -2,6 +2,7 @@ package com.engine.core;
 
 import com.engine.components.CameraComponent;
 import com.engine.components.UIComponent;
+import com.engine.components.GameObjectComponent;
 import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
 import com.engine.input.InputManager;
@@ -140,6 +141,9 @@ public class GameEngine {
       // Update physics
       this.physicsWorld.update(deltaTime);
 
+      // Update GameObjects
+      updateGameObjects(deltaTime);
+
       // Update current scene
       if (sceneManager.getCurrentScene() != null) {
         sceneManager.update(deltaTime);
@@ -160,6 +164,27 @@ public class GameEngine {
     } catch (Exception e) {
       LOGGER.log(Level.SEVERE, "Error in game update loop", e);
     }
+  }
+
+  /**
+   * Update all GameObjects in the world
+   */
+  private void updateGameObjects(double deltaTime) {
+    ecs.findEntitiesWith(GameObjectComponent.class).forEach(result -> {
+      Entity entity = result.entity();
+      GameObjectComponent component = result.comp();
+
+      // Skip if the GameObject has been destroyed
+      if (component.isDestroyed()) {
+        return;
+      }
+
+      // Initialize GameObject if needed
+      component.initIfNeeded(entity);
+
+      // Update GameObject
+      component.getGameObject().update(deltaTime);
+    });
   }
 
   /**
@@ -301,7 +326,7 @@ public class GameEngine {
 
   /**
    * Get the input manager for handling keyboard and mouse input
-   * 
+   *
    * @return InputManager instance
    */
   public InputManager getInputManager() {
