@@ -6,6 +6,7 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.Cursor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.HashMap;
@@ -101,16 +102,19 @@ public class Editor {
   /**
    * Find the deepest editor element at the given position, respecting panel
    * hierarchy
-   * 
+   *
    * @param x        X coordinate
    * @param y        Y coordinate
    * @param elements List of elements to check
    * @return The found element or null
    */
   private EditorElement findElementAt(int x, int y, List<EditorElement> elements) {
+    // Create a copy if this is the main elements list
+    List<EditorElement> elementsCopy = new ArrayList<>(elements);
+
     // Check from top to bottom (last element drawn is on top)
-    for (int i = elements.size() - 1; i >= 0; i--) {
-      EditorElement element = elements.get(i);
+    for (int i = elementsCopy.size() - 1; i >= 0; i--) {
+      EditorElement element = elementsCopy.get(i);
 
       if (element.contains(x, y)) {
         // If this is a panel, check if any of its children contain the point
@@ -124,6 +128,43 @@ public class Editor {
           }
         }
         return element;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Find a panel that has a resize area at the given position
+   *
+   * @param x        X coordinate
+   * @param y        Y coordinate
+   * @param elements List of elements to check
+   * @return The panel with a resize area or null
+   */
+  private EditorPanel findPanelForResize(int x, int y, List<EditorElement> elements) {
+    // Create a copy if this is the main elements list
+    List<EditorElement> elementsCopy =  new ArrayList<>(this.elements);
+
+    // Check from top to bottom (last element drawn is on top)
+    for (int i = elementsCopy.size() - 1; i >= 0; i--) {
+      EditorElement element = elementsCopy.get(i);
+
+      if (element instanceof EditorPanel) {
+        EditorPanel panel = (EditorPanel) element;
+
+        // First check children recursively
+        EditorPanel childPanel = findPanelForResize(x, y, panel.getChildren());
+        if (childPanel != null) {
+          return childPanel;
+        }
+
+        // Then check if this panel has a resize area at the mouse position
+        if (panel.contains(x, y) && panel.isResizable() && !panel.isCollapsed()) {
+          EditorPanel.ResizeDirection dir = panel.getResizeDirection(x, y);
+          if (dir != EditorPanel.ResizeDirection.NONE) {
+            return panel;
+          }
+        }
       }
     }
     return null;
@@ -252,19 +293,13 @@ public class Editor {
   }
 
   private boolean handleMouseMoved(MouseEvent e) {
-    // Check for resize cursors
-    for (EditorElement element : elements) {
-      if (element instanceof EditorPanel) {
-        EditorPanel panel = (EditorPanel) element;
-        if (panel.isResizable() && panel.contains(e.getX(), e.getY()) && !panel.isCollapsed()) {
-          EditorPanel.ResizeDirection dir = panel.getResizeDirection(e.getX(), e.getY());
-          if (dir != EditorPanel.ResizeDirection.NONE) {
-            gameFrame.setCursor(Cursor.getPredefinedCursor(
-                panel.getCursorForResizeDirection(dir)));
-            return true;
-          }
-        }
-      }
+    // Check if we're over any panel's resize area
+    EditorPanel resizePanel = findPanelForResize(e.getX(), e.getY(), elements);
+    if (resizePanel != null) {
+      EditorPanel.ResizeDirection dir = resizePanel.getResizeDirection(e.getX(), e.getY());
+      int cursorType = resizePanel.getCursorForResizeDirection(dir);
+      gameFrame.setCursor(Cursor.getPredefinedCursor(cursorType));
+      return true;
     }
 
     // Reset cursor if not over a resizable area
@@ -296,23 +331,31 @@ public class Editor {
    * Brings an element to the front by moving it to the end of the list
    */
   private void bringToFront(EditorElement element) {
-    if (elements.remove(element)) {
-      elements.add(element);
+    synchronized (elements) {
+      if (elements.remove(element)) {
+        elements.add(element);
+      }
     }
   }
 
   public void addElement(EditorElement element) {
-    elements.add(element);
+    synchronized (elements) {
+      elements.add(element);
+    }
   }
 
   public void removeElement(EditorElement element) {
-    elements.remove(element);
+    synchronized (elements) {
+      elements.remove(element);
+    }
   }
 
   public EditorElement getElementByName(String name) {
-    for (EditorElement element : elements) {
-      if (element.getName().equals(name)) {
-        return element;
+    synchronized (elements) {
+      for (EditorElement element : elements) {
+        if (element.getName().equals(name)) {
+          return element;
+        }
       }
     }
     return null;
@@ -327,8 +370,14 @@ public class Editor {
       drawGrid(g);
     }
 
-    // Draw panels from back to front
-    for (EditorElement element : elements) {
+    // Create a copy of the elements list to avoid ConcurrentModificationException
+    List<EditorElement> elementsCopy;
+    synchronized (elements) {
+      elementsCopy = new ArrayList<>(elements);
+    }
+
+    // Draw panels from back to front using the copy
+    for (EditorElement element : elementsCopy) {
       element.render(g);
     }
   }
@@ -337,7 +386,14 @@ public class Editor {
     if (!active)
       return;
 
-    for (EditorElement element : elements) {
+    // Create a copy of the elements list to avoid ConcurrentModificationException
+    List<EditorElement> elementsCopy;
+    synchronized (elements) {
+      elementsCopy = new ArrayList<>(elements);
+    }
+
+    // Update all elements using the copy
+    for (EditorElement element : elementsCopy) {
       element.update(deltaTime);
     }
   }
@@ -393,9 +449,11 @@ public class Editor {
     currentTheme = theme;
 
     // Apply to all panels
-    for (EditorElement element : elements) {
-      if (element instanceof EditorPanel) {
-        ((EditorPanel) element).setTheme(theme);
+    synchronized (elements) {
+      for (EditorElement element : elements) {
+        if (element instanceof EditorPanel) {
+          ((EditorPanel) element).setTheme(theme);
+        }
       }
     }
   }
@@ -420,19 +478,20 @@ public class Editor {
       try (FileWriter writer = new FileWriter(file)) {
         // Write number of elements
         writer.write(elements.size() + "\n");
-
         // Write each element's data
-        for (EditorElement element : elements) {
-          if (element instanceof EditorPanel) {
-            EditorPanel panel = (EditorPanel) element;
-            writer.write(String.format("%s,%d,%d,%d,%d,%b,%b\n",
-                panel.getName(),
-                panel.getX(),
-                panel.getY(),
-                panel.getWidth(),
-                panel.getHeight(),
-                panel.isVisible(),
-                panel.isCollapsed()));
+        synchronized (elements) {
+          for (EditorElement element : elements) {
+            if (element instanceof EditorPanel) {
+              EditorPanel panel = (EditorPanel) element;
+              writer.write(String.format("%s,%d,%d,%d,%d,%b,%b\n",
+                  panel.getName(),
+                  panel.getX(),
+                  panel.getY(),
+                  panel.getWidth(),
+                  panel.getHeight(),
+                  panel.isVisible(),
+                  panel.isCollapsed()));
+            }
           }
         }
       }
@@ -456,10 +515,8 @@ public class Editor {
       try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
         // Read number of elements
         int count = Integer.parseInt(reader.readLine());
-
         // Map to store loaded panel data
         Map<String, String[]> panelData = new HashMap<>();
-
         // Read each element's data
         for (int i = 0; i < count; i++) {
           String line = reader.readLine();
@@ -471,23 +528,22 @@ public class Editor {
             panelData.put(parts[0], parts);
           }
         }
-
         // Apply loaded data to existing panels
-        for (EditorElement element : elements) {
-          if (element instanceof EditorPanel) {
-            String[] data = panelData.get(element.getName());
-            if (data != null) {
-              element.setPosition(Integer.parseInt(data[1]), Integer.parseInt(data[2]));
-
-              EditorPanel panel = (EditorPanel) element;
-              int width = Integer.parseInt(data[3]);
-              int height = Integer.parseInt(data[4]);
-              panel.width = width;
-              panel.height = height;
-              panel.expandedHeight = height;
-
-              panel.setVisible(Boolean.parseBoolean(data[5]));
-              panel.setCollapsed(Boolean.parseBoolean(data[6]));
+        synchronized (elements) {
+          for (EditorElement element : elements) {
+            if (element instanceof EditorPanel) {
+              String[] data = panelData.get(element.getName());
+              if (data != null) {
+                element.setPosition(Integer.parseInt(data[1]), Integer.parseInt(data[2]));
+                EditorPanel panel = (EditorPanel) element;
+                int width = Integer.parseInt(data[3]);
+                int height = Integer.parseInt(data[4]);
+                panel.width = width;
+                panel.height = height;
+                panel.expandedHeight = height;
+                panel.setVisible(Boolean.parseBoolean(data[5]));
+                panel.setCollapsed(Boolean.parseBoolean(data[6]));
+              }
             }
           }
         }

@@ -81,7 +81,6 @@ public class EditorExample {
 
     // Create scene hierarchy panel
     EditorPanel hierarchyPanel = editor.createPanel(10, 320, 200, 250, "Hierarchy");
-
     // Create inspector panel
     EditorPanel inspectorPanel = editor.createPanel(
         game.getGameFrame().getWidth() - 210,
