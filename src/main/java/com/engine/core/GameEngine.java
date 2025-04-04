@@ -37,7 +37,6 @@ import javax.imageio.ImageIO;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.jbox2d.common.Vec2;
 
 @Singleton
 public class GameEngine implements OverlayRenderer {
@@ -80,7 +79,7 @@ public class GameEngine implements OverlayRenderer {
   private SceneManager sceneManager;
   private final UISystem uiSystem;
   private final InputManager inputManager;
-  private final Properties config;
+  private final EngineConfig config;
 
   // New systems
   private final EventSystem eventSystem;
@@ -91,7 +90,7 @@ public class GameEngine implements OverlayRenderer {
   public GameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
       EntityFactory entityFactory, UISystem uiSystem,
-      InputManager inputManager, Properties config,
+      InputManager inputManager, EngineConfig config,
       EventSystem eventSystem, AssetManager assetManager,
       AnimationSystem animationSystem) {
     this.window = window;
@@ -106,15 +105,10 @@ public class GameEngine implements OverlayRenderer {
     this.eventSystem = eventSystem;
     this.assetManager = assetManager;
     this.animationSystem = animationSystem;
-
-    // Apply configuration
-    this.targetFps = Integer.parseInt(this.config.getProperty("engine.targetFps", "60"));
-    LOGGER.info("Traget FPS " + this.targetFps);
-    this.showPerformanceStats = Boolean.parseBoolean(config.getProperty("engine.showPerformanceStats", "false"));
-
-    // Set up asset path
-    String assetPath = config.getProperty("engine.assetPath", "assets");
-    assetManager.setBasePath(assetPath);
+    this.debugGrid = this.config.isShowGrid();
+    this.debugColliders = this.config.isDebugColliders();
+    this.debugPhysics = this.config.isDebugPhysics();
+    this.targetFps = this.config.getTargetFps();
 
     this.window.setOnClose(() -> {
       stop();
@@ -323,6 +317,7 @@ public class GameEngine implements OverlayRenderer {
     engineState = State.RUNNING;
     this.window.initialize();
     this.cameraSystem.updateAllViewports(window.getWidth(), window.getHeight());
+    this.setDebugDisplay(debugPhysics, debugColliders, this.debugGrid);
     LOGGER.info("Starting the Game Engine with target FPS: " + targetFps);
     scheduler.tickAtFixedRate(targetFps); // Start scheduler at target FPS
     return this;
@@ -431,7 +426,7 @@ public class GameEngine implements OverlayRenderer {
     if (debugOverlay != null && debugOverlay.isVisible()) {
       // Update FPS
       debugOverlay.updateStat("FPS", averageFps);
-
+      debugOverlay.updateStat("Gravity",this.config.getGravity().toString());
       // // Update entity count
       // int entityCount = ecs.findEntitiesWith().count();
       // debugOverlay.updateStat("Entities", entityCount);

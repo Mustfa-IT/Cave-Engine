@@ -32,8 +32,8 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   private final float timeStep;
 
   @Inject
-  public PhysicsWorld(Vec2 gravity, Dominion ecs, CollisionSystem collisionSystem, EngineConfig config) {
-    super(gravity);
+  public PhysicsWorld(Dominion ecs, CollisionSystem collisionSystem, EngineConfig config) {
+    super(config.getGravity());
     this.ecs = ecs;
     this.velocityIterations = config.getVelocityIterations();
     this.positionIterations = config.getPositionIterations();

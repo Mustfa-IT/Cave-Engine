@@ -28,20 +28,7 @@ public class Main {
     GameEngine game = GameEngine.createEngine();
 
     // Configure the engine with enhanced fluent API
-    game.configure(config -> config
-        .targetFps(100)
-        .showPerformanceStats(true)
-        .debugMode(false, false, false) // Turned off collider debugging to improve performance
-        .gravity(0, -9.8f)
-        .windowTitle("Enhanced Physics Engine")
-        // Physics optimization settings
-        .physicsIterations(6, 2) // Reduced from default (typically 10, 8)
-        .physicsTimeStep(1 / 45f) // Slightly larger step (less accuracy, better performance)
-        .enableBodySleeping(true)
-        .broadphaseOptimization(true))
-        .createCamera(0, 0, 1.0f)
-        .createScene("test", () -> new SimpleScene(game.getEntityFactory()))
-        .createDebugOverlay(); // Add debug overlay
+    game.createScene("test", () -> new SimpleScene(game.getEntityFactory()));
 
     // Set active scene after all scenes are created
     game.setActiveScene("test");

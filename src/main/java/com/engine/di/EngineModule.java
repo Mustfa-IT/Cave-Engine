@@ -94,14 +94,6 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public Vec2 provideGravity(Properties config) {
-      return new Vec2(
-          Float.parseFloat(config.getProperty("physics.gravityX", "0")),
-          Float.parseFloat(config.getProperty("physics.gravityY", "9.8")));
-    }
-
-    @Provides
-    @Singleton
     public CameraSystem provideCameraSystem(Dominion ecs) {
       return new CameraSystem(ecs);
     }
@@ -172,7 +164,19 @@ public abstract class EngineModule {
 
       engineConfig.broadphaseOptimization(
           Boolean.parseBoolean(config.getProperty("physics.optimizeBroadphase", "false")));
+      engineConfig.debugMode(
+          Boolean.parseBoolean(config.getProperty("physics.debug", "false")),
+          Boolean.parseBoolean(config.getProperty("collision.debug", "false")),
+          Boolean.parseBoolean(config.getProperty("render.debug", "false")));
 
+      engineConfig.targetFps(
+          Integer.parseInt(config.getProperty("engine.targetFps", "60")));
+
+      engineConfig
+          .showPerformanceStats(Boolean.parseBoolean(config.getProperty("debug.showPerformanceStats", "false")));
+      engineConfig.gravity(
+          Float.parseFloat(config.getProperty("physics.gravityX", "0")),
+          Float.parseFloat(config.getProperty("physics.gravityY", "9.8")));
       return engineConfig;
     }
 
@@ -181,7 +185,7 @@ public abstract class EngineModule {
     public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
-        InputManager inputManager, Properties config,
+        InputManager inputManager, EngineConfig config,
         EventSystem eventSystem, AssetManager assetManager,
         AnimationSystem animationSystem) {
       GameEngine engine = new GameEngine(window, ecs, renderer, cameraSystem,

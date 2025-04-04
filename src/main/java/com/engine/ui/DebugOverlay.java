@@ -20,6 +20,7 @@ public class DebugOverlay extends AbstractUIElement {
     addStat("FPS", "0.0");
     addStat("Objects", "0");
     addStat("Memory", "0 MB");
+    addStat("Gravity","0");
   }
 
   @Override

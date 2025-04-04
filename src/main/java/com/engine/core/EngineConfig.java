@@ -11,12 +11,40 @@ public class EngineConfig {
   private boolean enableBodySleeping = true; // Default value
   private boolean optimizeBroadphase = false; // Default value
   private int targetFps = 60;
-  private boolean showPerformanceStats;
-  private boolean debugPhysics;
-  private boolean debugColliders;
-  private boolean showGrid;
-  private Vec2 gravity;
-  private String windowTitle;
+  private boolean showPerformanceStats = false;
+  private boolean debugPhysics = false;
+  private boolean debugColliders= false;
+  private boolean showGrid = false;
+  private Vec2 gravity = new Vec2(0f,-9.8f);
+  private String windowTitle = "Cave Engine";
+
+  public int getTargetFps() {
+    return targetFps;
+  }
+
+  public boolean isShowPerformanceStats() {
+    return showPerformanceStats;
+  }
+
+  public boolean isDebugPhysics() {
+    return debugPhysics;
+  }
+
+  public boolean isDebugColliders() {
+    return debugColliders;
+  }
+
+  public boolean isShowGrid() {
+    return showGrid;
+  }
+
+  public Vec2 getGravity() {
+    return gravity;
+  }
+
+  public String getWindowTitle() {
+    return windowTitle;
+  }
 
   /**
    * Default constructor

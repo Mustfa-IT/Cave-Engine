@@ -25,7 +25,6 @@ import com.engine.core.CameraSystem;
 import com.engine.core.GameWindow;
 import com.engine.physics.BoxCollider;
 import com.engine.physics.CircleCollider;
-import com.engine.physics.PhysicsWorld;
 import com.engine.physics.PolygonCollider;
 
 import dev.dominion.ecs.api.Dominion;
@@ -355,13 +354,13 @@ public class RenderSystem implements RenderingSystem {
           debugG.setFont(new Font("SansSerif", Font.PLAIN, 10));
           debugG.drawString(String.format("%.1f", speed), (int) velX + 5, (int) velY);
         }
-
-        // Display body type and sensor status
-        String bodyTypeText = getBodyTypeDescription(physics.getBody().getType());
-        String sensorText = physics.isTrigger() ? " [SENSOR]" : "";
-        debugG.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        debugG.setColor(Color.WHITE);
-        debugG.drawString(bodyTypeText + sensorText, -15, -10);
+        // THIS ADDS TOO MUCH LOAD
+        // // Display body type and sensor status
+        // String bodyTypeText = getBodyTypeDescription(physics.getBody().getType());
+        // String sensorText = physics.isTrigger() ? " [SENSOR]" : "";
+        // debugG.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        // debugG.setColor(Color.WHITE);
+        // debugG.drawString(bodyTypeText + sensorText, -15, -10);
 
         debugG.dispose();
       });
@@ -373,7 +372,7 @@ public class RenderSystem implements RenderingSystem {
       world.findEntitiesWith(Transform.class, PhysicsBodyComponent.class).forEach(result -> {
         Transform transform = result.comp1();
         PhysicsBodyComponent physics = result.comp2();
-
+        if(transform == null || physics ==null || physics.getBody() == null) return;
         // Get a separate graphics context
         Graphics2D debugG = (Graphics2D) g.create();
 
@@ -459,12 +458,13 @@ public class RenderSystem implements RenderingSystem {
           // Draw collision category/mask info if in extended debug mode
           if (debugPhysics) {
             // Display collision filtering info
-            String filterInfo = String.format("C:%04X M:%04X",
-                physics.getCollisionCategory(),
-                physics.getCollisionMask());
-            debugG.setFont(new Font("Monospaced", Font.PLAIN, 10));
-            debugG.setColor(Color.WHITE);
-            debugG.drawString(filterInfo, -20, 20);
+            // TOO MUCH LOAD
+            // String filterInfo = String.format("C:%04X M:%04X",
+            //     physics.getCollisionCategory(),
+            //     physics.getCollisionMask());
+            // debugG.setFont(new Font("Monospaced", Font.PLAIN, 10));
+            // debugG.setColor(Color.BLACK);
+            // debugG.drawString(filterInfo, -20, 20);
           }
         }
 
