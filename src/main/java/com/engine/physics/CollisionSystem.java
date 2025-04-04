@@ -138,7 +138,7 @@ public class CollisionSystem implements ContactListener {
 
   /**
    * Get all active collisions for an entity
-   * 
+   *
    * @param entity The entity to check
    * @return List of active collisions
    */
@@ -148,11 +148,69 @@ public class CollisionSystem implements ContactListener {
 
   /**
    * Check if an entity is colliding with any other entities
-   * 
+   *
    * @param entity The entity to check
    * @return True if the entity is involved in any active collisions
    */
   public boolean hasCollisions(Entity entity) {
     return !getCollisionsForEntity(entity).isEmpty();
+  }
+
+  /**
+   * Get all entities colliding with the specified entity
+   *
+   * @param entity The entity to check
+   * @return List of entities in collision
+   */
+  public List<Entity> getCollidingEntities(Entity entity) {
+    List<Entity> collidingEntities = new ArrayList<>();
+
+    List<Collision> collisions = getCollisionsForEntity(entity);
+    for (Collision collision : collisions) {
+      collidingEntities.add(collision.getOther(entity));
+    }
+
+    return collidingEntities;
+  }
+
+  /**
+   * Check if an entity is colliding with another specific entity
+   *
+   * @param entity The entity to check
+   * @param other  The other entity to check against
+   * @return True if the entities are colliding
+   */
+  public boolean isCollidingWith(Entity entity, Entity other) {
+    List<Collision> collisions = getCollisionsForEntity(entity);
+
+    for (Collision collision : collisions) {
+      if (collision.involves(other)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Find all entities of a specific type that are colliding with the given entity
+   *
+   * @param <T>           The component type to filter by
+   * @param entity        The entity to check collisions for
+   * @param componentType The component type to filter colliding entities by
+   * @return List of entities with the specified component type that are colliding
+   */
+  public <T> List<Entity> findCollidingEntitiesWith(Entity entity, Class<T> componentType) {
+    List<Entity> result = new ArrayList<>();
+    List<Collision> collisions = getCollisionsForEntity(entity);
+
+    for (Collision collision : collisions) {
+      Entity other = collision.getOther(entity);
+      if (other != null && other.has(componentType)) {
+        result.add(other);
+      }
+    }
+
+    return result;
   }
 }

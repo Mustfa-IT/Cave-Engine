@@ -108,7 +108,8 @@ public class GameEngine implements OverlayRenderer {
     this.animationSystem = animationSystem;
 
     // Apply configuration
-    this.targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
+    this.targetFps = Integer.parseInt(this.config.getProperty("engine.targetFps", "60"));
+    LOGGER.info("Traget FPS " + this.targetFps);
     this.showPerformanceStats = Boolean.parseBoolean(config.getProperty("engine.showPerformanceStats", "false"));
 
     // Set up asset path

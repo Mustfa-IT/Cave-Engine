@@ -29,7 +29,7 @@ public class Main {
 
     // Configure the engine with enhanced fluent API
     game.configure(config -> config
-        .targetFps(60)
+        .targetFps(100)
         .showPerformanceStats(true)
         .debugMode(false, true, true)
         .gravity(0, -9.8f)

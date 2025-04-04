@@ -5,6 +5,8 @@ import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.FixtureDef;
 
+import com.engine.physics.PhysicsWorld;
+
 /**
  * Component representing a physical body in the Box2D world.
  */
@@ -90,7 +92,7 @@ public class PhysicsBodyComponent {
   /**
    * Set whether this body is a sensor (triggers collisions but has no physical
    * response)
-   * 
+   *
    * @param isSensor True if this body should be a sensor
    */
   public void setSensor(boolean isSensor) {
@@ -105,7 +107,7 @@ public class PhysicsBodyComponent {
 
   /**
    * Set the collision category bits (which collision group this body belongs to)
-   * 
+   *
    * @param category The category bits
    */
   public void setCollisionCategory(short category) {
@@ -123,7 +125,7 @@ public class PhysicsBodyComponent {
   /**
    * Set the collision mask bits (which collision groups this body should collide
    * with)
-   * 
+   *
    * @param mask The mask bits
    */
   public void setCollisionMask(short mask) {
@@ -140,7 +142,7 @@ public class PhysicsBodyComponent {
 
   /**
    * Get the collision category bits
-   * 
+   *
    * @return The category bits
    */
   public short getCollisionCategory() {
@@ -149,10 +151,40 @@ public class PhysicsBodyComponent {
 
   /**
    * Get the collision mask bits
-   * 
+   *
    * @return The mask bits
    */
   public short getCollisionMask() {
     return collisionMask;
+  }
+
+  /**
+   * Set the width of this physics body
+   *
+   * @param width The width in world units
+   */
+  public void setWidth(float width) {
+    this.width = width;
+  }
+
+  /**
+   * Set the height of this physics body
+   *
+   * @param height The height in world units
+   */
+  public void setHeight(float height) {
+    this.height = height;
+  }
+
+  /**
+   * Get the physics world this body belongs to
+   *
+   * @return The physics world
+   */
+  public PhysicsWorld getWorld() {
+    if (body != null) {
+      return (PhysicsWorld) body.getWorld();
+    }
+    return null;
   }
 }

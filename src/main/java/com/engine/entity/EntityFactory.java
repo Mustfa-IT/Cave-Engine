@@ -9,11 +9,13 @@ import javax.inject.Singleton;
 
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
+import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.BodyDef;
 import org.jbox2d.dynamics.BodyType;
 
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
+import com.engine.components.RigidBody;
 import com.engine.components.Transform;
 import com.engine.components.GameObjectComponent;
 import com.engine.components.SpriteComponent;
@@ -22,6 +24,10 @@ import com.engine.graph.Circle;
 import com.engine.graph.Rect;
 import com.engine.gameobject.GameObject;
 import com.engine.physics.PhysicsWorld;
+import com.engine.physics.BoxCollider;
+import com.engine.physics.CircleCollider;
+import com.engine.physics.Collider;
+import com.engine.physics.PolygonCollider;
 import com.engine.animation.Animation;
 
 import dev.dominion.ecs.api.Dominion;
@@ -493,6 +499,174 @@ public class EntityFactory {
     public PhysicsParameters setCollisionMask(short mask) {
       this.collisionMask = mask;
       return this;
+    }
+  }
+
+  /**
+   * Creates a static box entity
+   */
+  public Entity createStaticBox(float x, float y, float width, float height,Color color) {
+    return createBox(x, y, width, height, RigidBody.Type.STATIC,color);
+  }
+
+  /**
+   * Creates a dynamic box entity
+   */
+  public Entity createDynamicBox(float x, float y, float width, float height,Color color) {
+    return createBox(x, y, width, height, RigidBody.Type.DYNAMIC,color);
+  }
+
+  /**
+   * Creates a box entity with the specified rigid body type
+   */
+  public Entity createBox(float x, float y, float width, float height, RigidBody.Type bodyType,Color color) {
+    // Create box collider
+    BoxCollider boxCollider = new BoxCollider(width, height);
+
+    // Create body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = RigidBody.toBox2DBodyType(bodyType);
+    bodyDef.position.set(physicsWorld.toPhysicsWorld(x), physicsWorld.toPhysicsWorld(y));
+
+    // Create entity
+    Entity entity = ecs.createEntity(
+        "box_" + System.currentTimeMillis(),
+        new Transform(x, y, 0, 1, 1),
+        new RenderableComponent(new Rect(color,width, height)),
+        boxCollider,
+        new PhysicsBodyComponent(
+            bodyDef,
+            boxCollider.getShape(),
+            bodyType == RigidBody.Type.STATIC ? 0.0f : 1.0f,
+            0.3f,
+            0.2f));
+
+    return entity;
+  }
+
+  /**
+   * Creates a static circle entity
+   */
+  public Entity createStaticCircle(float x, float y, float radius,Color color) {
+    return createCircle(x, y, radius, RigidBody.Type.STATIC,color);
+  }
+
+  /**
+   * Creates a dynamic circle entity
+   */
+  public Entity createDynamicCircle(float x, float y, float radius,Color color) {
+    return createCircle(x, y, radius, RigidBody.Type.DYNAMIC,color);
+  }
+
+  /**
+   * Creates a circle entity with the specified rigid body type
+   */
+  public Entity createCircle(float x, float y, float radius, RigidBody.Type bodyType,Color color) {
+    // Create circle collider
+    CircleCollider circleCollider = new CircleCollider(radius);
+
+    // Create body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = RigidBody.toBox2DBodyType(bodyType);
+    bodyDef.position.set(physicsWorld.toPhysicsWorld(x), physicsWorld.toPhysicsWorld(y));
+
+    // Create entity
+    Entity entity = ecs.createEntity(
+        "circle_" + System.currentTimeMillis(),
+        new Transform(x, y, 0, 1, 1),
+        new RenderableComponent(new Circle(color,radius)),
+        circleCollider,
+        new PhysicsBodyComponent(
+            bodyDef,
+            circleCollider.getShape(),
+            bodyType == RigidBody.Type.STATIC ? 0.0f : 1.0f,
+            0.3f,
+            0.2f));
+
+    return entity;
+  }
+
+  /**
+   * Creates a polygon entity with the specified vertices and rigid body type
+   */
+  public Entity createPolygon(float x, float y, Vec2[] vertices, RigidBody.Type bodyType) {
+    // Convert vertices to physics world coordinates
+    Vec2[] scaledVertices = new Vec2[vertices.length];
+    for (int i = 0; i < vertices.length; i++) {
+      scaledVertices[i] = physicsWorld.toPhysicsWorld(vertices[i].x, vertices[i].y);
+    }
+
+    // Create polygon collider
+    PolygonCollider polygonCollider = new PolygonCollider(scaledVertices);
+
+    // Create body definition
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = RigidBody.toBox2DBodyType(bodyType);
+    bodyDef.position.set(physicsWorld.toPhysicsWorld(x), physicsWorld.toPhysicsWorld(y));
+
+    // Create entity with a basic renderable component (you might want to create a
+    // polygon renderer)
+    Entity entity = ecs.createEntity(
+        "polygon_" + System.currentTimeMillis(),
+        new Transform(x, y, 0, 1, 1),
+        polygonCollider,
+        new PhysicsBodyComponent(
+            bodyDef,
+            polygonCollider.getShape(),
+            bodyType == RigidBody.Type.STATIC ? 0.0f : 1.0f,
+            0.3f,
+            0.2f));
+
+    return entity;
+  }
+
+  /**
+   * Creates a sensor entity that triggers collisions but has no physical response
+   */
+  public Entity createSensor(float x, float y, Collider collider) {
+    // Create body definition for a static body
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = BodyType.STATIC;
+    bodyDef.position.set(physicsWorld.toPhysicsWorld(x), physicsWorld.toPhysicsWorld(y));
+
+    // Create physics body component
+    PhysicsBodyComponent physicsBody = new PhysicsBodyComponent(
+        bodyDef,
+        collider.getShape(),
+        0.0f, // Zero density for sensor
+        0.0f, // Zero friction for sensor
+        0.0f // Zero restitution for sensor
+    );
+
+    // Set as sensor
+    physicsBody.setSensor(true);
+
+    // Create entity
+    Entity entity = ecs.createEntity(
+        "sensor_" + System.currentTimeMillis(),
+        new Transform(x, y, 0, 1, 1),
+        physicsBody);
+
+    // Add the specific collider component
+    if (collider instanceof BoxCollider) {
+      entity.add((BoxCollider) collider);
+    } else if (collider instanceof CircleCollider) {
+      entity.add((CircleCollider) collider);
+    } else if (collider instanceof PolygonCollider) {
+      entity.add((PolygonCollider) collider);
+    }
+
+    return entity;
+  }
+
+  /**
+   * Set collision filtering for an entity
+   */
+  public void setCollisionFiltering(Entity entity, short category, short mask) {
+    if (entity.has(PhysicsBodyComponent.class)) {
+      PhysicsBodyComponent physics = entity.get(PhysicsBodyComponent.class);
+      physics.setCollisionCategory(category);
+      physics.setCollisionMask(mask);
     }
   }
 }

@@ -4,6 +4,10 @@ import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.World;
 import org.jbox2d.dynamics.Body;
 import org.jbox2d.collision.shapes.PolygonShape;
+import org.jbox2d.collision.shapes.CircleShape;
+import org.jbox2d.dynamics.BodyDef;
+import org.jbox2d.dynamics.FixtureDef;
+import org.jbox2d.dynamics.BodyType;
 
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.Transform;
@@ -20,7 +24,7 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   private static final Logger LOGGER = Logger.getLogger(PhysicsWorld.class.getName());
   private final Dominion ecs;
   // Scale factor - increase for better physics precision
-  private float worldUnitsPerMeter = 30.0f;
+  private static float worldUnitsPerMeter = 30.0f;
   private final int velocityIterations = 10;
   private final int positionIterations = 8;
   private float accumulator = 0.0f;
@@ -51,6 +55,26 @@ public class PhysicsWorld extends World implements PhysicsSystem {
           PhysicsBodyComponent physics = result.comp();
           if (physics.getBody() == null) {
             Body body = createBody(physics.getBodyDef());
+
+            // Apply correct shape based on collider type
+            if (result.entity().has(BoxCollider.class)) {
+              BoxCollider boxCollider = result.entity().get(BoxCollider.class);
+              physics.setShape(boxCollider.getShape());
+              physics.setWidth(boxCollider.getWidth());
+              physics.setHeight(boxCollider.getHeight());
+            } else if (result.entity().has(CircleCollider.class)) {
+              CircleCollider circleCollider = result.entity().get(CircleCollider.class);
+              physics.setShape(circleCollider.getShape());
+              physics.setWidth(circleCollider.getRadius() * 2);
+              physics.setHeight(circleCollider.getRadius() * 2);
+            } else if (result.entity().has(PolygonCollider.class)) {
+              PolygonCollider polygonCollider = result.entity().get(PolygonCollider.class);
+              physics.setShape(polygonCollider.getShape());
+              // Set approximate width/height for debug rendering
+              calculatePolygonBounds(polygonCollider, physics);
+            }
+
+            // Create fixture with the shape
             body.createFixture(physics.getFixtureDef());
             physics.setBody(body);
             body.setUserData(result.entity());
@@ -59,6 +83,36 @@ public class PhysicsWorld extends World implements PhysicsSystem {
             System.out.println("Body created at: " + body.getPosition().x + ", " + body.getPosition().y);
           }
         });
+  }
+
+  /**
+   * Calculate approximate bounds of a polygon collider for debug rendering
+   *
+   * @param polygonCollider The polygon collider
+   * @param physics         The physics body component to update
+   */
+  private void calculatePolygonBounds(PolygonCollider polygonCollider, PhysicsBodyComponent physics) {
+    Vec2[] vertices = polygonCollider.getVertices();
+    if (vertices == null || vertices.length == 0) {
+      physics.setWidth(1.0f);
+      physics.setHeight(1.0f);
+      return;
+    }
+
+    float minX = Float.MAX_VALUE;
+    float maxX = Float.MIN_VALUE;
+    float minY = Float.MAX_VALUE;
+    float maxY = Float.MIN_VALUE;
+
+    for (Vec2 v : vertices) {
+      minX = Math.min(minX, v.x);
+      maxX = Math.max(maxX, v.x);
+      minY = Math.min(minY, v.y);
+      maxY = Math.max(maxY, v.y);
+    }
+
+    physics.setWidth((maxX - minX) * worldUnitsPerMeter);
+    physics.setHeight((maxY - minY) * worldUnitsPerMeter);
   }
 
   /**
@@ -156,5 +210,90 @@ public class PhysicsWorld extends World implements PhysicsSystem {
         LOGGER.warning("Error removing physics body: " + e.getMessage());
       }
     }
+  }
+
+  /**
+   * Create a Box2D body with a circle shape
+   *
+   * @param position The position in physics world coordinates
+   * @param radius   The radius in physics world coordinates
+   * @param bodyType The type of body (static, dynamic, kinematic)
+   * @return The created Box2D body
+   */
+  public Body createCircleBody(Vec2 position, float radius, BodyType bodyType) {
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.position.set(position);
+    bodyDef.type = bodyType;
+
+    Body body = createBody(bodyDef);
+
+    CircleShape circleShape = new CircleShape();
+    circleShape.setRadius(radius);
+
+    FixtureDef fixtureDef = new FixtureDef();
+    fixtureDef.shape = circleShape;
+    fixtureDef.density = 1.0f;
+    fixtureDef.friction = 0.3f;
+    fixtureDef.restitution = 0.2f;
+
+    body.createFixture(fixtureDef);
+    return body;
+  }
+
+  /**
+   * Create a Box2D body with a box shape
+   *
+   * @param position   The position in physics world coordinates
+   * @param halfWidth  The half-width in physics world coordinates
+   * @param halfHeight The half-height in physics world coordinates
+   * @param bodyType   The type of body (static, dynamic, kinematic)
+   * @return The created Box2D body
+   */
+  public Body createBoxBody(Vec2 position, float halfWidth, float halfHeight, BodyType bodyType) {
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.position.set(position);
+    bodyDef.type = bodyType;
+
+    Body body = createBody(bodyDef);
+
+    PolygonShape boxShape = new PolygonShape();
+    boxShape.setAsBox(halfWidth, halfHeight);
+
+    FixtureDef fixtureDef = new FixtureDef();
+    fixtureDef.shape = boxShape;
+    fixtureDef.density = 1.0f;
+    fixtureDef.friction = 0.3f;
+    fixtureDef.restitution = 0.2f;
+
+    body.createFixture(fixtureDef);
+    return body;
+  }
+
+  /**
+   * Create a Box2D body with a polygon shape
+   *
+   * @param position The position in physics world coordinates
+   * @param vertices The vertices of the polygon
+   * @param bodyType The type of body (static, dynamic, kinematic)
+   * @return The created Box2D body
+   */
+  public Body createPolygonBody(Vec2 position, Vec2[] vertices, BodyType bodyType) {
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.position.set(position);
+    bodyDef.type = bodyType;
+
+    Body body = createBody(bodyDef);
+
+    PolygonShape polygonShape = new PolygonShape();
+    polygonShape.set(vertices, vertices.length);
+
+    FixtureDef fixtureDef = new FixtureDef();
+    fixtureDef.shape = polygonShape;
+    fixtureDef.density = 1.0f;
+    fixtureDef.friction = 0.3f;
+    fixtureDef.restitution = 0.2f;
+
+    body.createFixture(fixtureDef);
+    return body;
   }
 }
