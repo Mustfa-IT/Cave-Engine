@@ -14,6 +14,7 @@ import com.engine.core.CameraSystem;
 import com.engine.core.GameEngine;
 import com.engine.core.GameWindow;
 import com.engine.entity.EntityFactory;
+import com.engine.graph.OverlayRenderer;
 import com.engine.graph.RenderSystem;
 import com.engine.graph.RenderingSystem;
 import com.engine.input.InputManager;
@@ -39,6 +40,10 @@ public abstract class EngineModule {
   @Binds
   @Singleton
   abstract PhysicsSystem bindPhysicsSystem(PhysicsWorld impl);
+
+  @Binds
+  @Singleton
+  abstract OverlayRenderer bindOverlayRenderer(GameEngine impl);
 
   // Module with concrete providers
   @Module
@@ -123,12 +128,24 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderingSystem renderer,
+    public RenderSystem provideRenderSystem(GameWindow window, Dominion ecs, CameraSystem cameraSystem) {
+      return new RenderSystem(window, ecs, cameraSystem);
+    }
+
+    @Provides
+    @Singleton
+    public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, Properties config) {
-      return new GameEngine(window, ecs, (RenderSystem) renderer, cameraSystem, (PhysicsWorld) physicsWorld,
+      GameEngine engine = new GameEngine(window, ecs, renderer, cameraSystem,
+          (PhysicsWorld) physicsWorld,
           entityFactory, uiSystem, inputManager, config);
+
+      // Initialize console right after engine creation
+      engine.createConsole();
+
+      return engine;
     }
   }
 }

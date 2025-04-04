@@ -4,6 +4,7 @@ import com.engine.components.CameraComponent;
 import com.engine.components.UIComponent;
 import com.engine.components.GameObjectComponent;
 import com.engine.entity.EntityFactory;
+import com.engine.graph.OverlayRenderer;
 import com.engine.graph.RenderSystem;
 import com.engine.input.InputManager;
 import com.engine.physics.PhysicsWorld;
@@ -15,6 +16,7 @@ import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
 import dev.dominion.ecs.api.Scheduler;
 
+import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +33,7 @@ import javax.inject.Singleton;
 import org.jbox2d.common.Vec2;
 
 @Singleton
-public class GameEngine {
+public class GameEngine implements OverlayRenderer {
   // Logger for better debugging
   private static final Logger LOGGER = Logger.getLogger(GameEngine.class.getName());
 
@@ -60,6 +62,11 @@ public class GameEngine {
   private long lastFpsReportTime = 0;
   private double averageFps = 0;
   private boolean showPerformanceStats = false;
+  private Entity debugOverlayEntity;
+  private com.engine.ui.DebugOverlay debugOverlay;
+
+  // Console system
+  private Console console;
 
   // Integrated components
   private final EntityFactory entityFactory;
@@ -92,6 +99,9 @@ public class GameEngine {
       this.closedByWindow = true;
       return null;
     });
+
+    // Tell the renderer about this engine so it can call renderOverlays
+    renderer.setOverlayRenderer(this);
 
     addShutdownHook(new Thread(this::stop));
     init();
@@ -161,6 +171,9 @@ public class GameEngine {
           LOGGER.info(String.format("FPS: %.2f", averageFps));
         }
       }
+
+      // Update debug stats
+      updateDebugStats();
     } catch (Exception e) {
       LOGGER.log(Level.SEVERE, "Error in game update loop", e);
     }
@@ -322,6 +335,67 @@ public class GameEngine {
 
   public UISystem getUiSystem() {
     return uiSystem;
+  }
+
+  /**
+   * Get the current FPS rate
+   *
+   * @return Current frames per second
+   */
+  public double getFps() {
+    return averageFps;
+  }
+
+  /**
+   * Creates and initializes the debug overlay
+   */
+  public GameEngine createDebugOverlay() {
+    if (debugOverlayEntity == null) {
+      debugOverlayEntity = uiSystem.createDebugOverlay(10, 10);
+      if (debugOverlayEntity != null && debugOverlayEntity.has(UIComponent.class)) {
+        UIComponent uiComp = debugOverlayEntity.get(UIComponent.class);
+        debugOverlay = (com.engine.ui.DebugOverlay) uiComp.getUi();
+        LOGGER.info("Debug overlay created");
+      }
+    }
+    return this;
+  }
+
+  /**
+   * Toggle visibility of the debug overlay
+   */
+  public GameEngine toggleDebugOverlay() {
+    if (debugOverlay != null) {
+      debugOverlay.toggleVisibility();
+      LOGGER.info("Debug overlay visibility toggled: " + debugOverlay.isVisible());
+    } else {
+      createDebugOverlay();
+    }
+    return this;
+  }
+
+  /**
+   * Update debug overlay with current stats
+   */
+  private void updateDebugStats() {
+    if (debugOverlay != null && debugOverlay.isVisible()) {
+      // Update FPS
+      debugOverlay.updateStat("FPS", averageFps);
+
+      // // Update entity count
+      // int entityCount = ecs.findEntitiesWith().count();
+      // debugOverlay.updateStat("Entities", entityCount);
+
+      // Update memory usage
+      Runtime runtime = Runtime.getRuntime();
+      long usedMemory = (runtime.totalMemory() - runtime.freeMemory()) / (1024 * 1024);
+      debugOverlay.updateStat("Memory", usedMemory + " MB");
+
+      // Update physics stats
+      debugOverlay.updateStat("Bodies", physicsWorld.getBodyCount());
+
+      // Update other engine stats as needed
+    }
   }
 
   /**
@@ -494,6 +568,59 @@ public class GameEngine {
     uiComp.setVisible(false);
 
     return this;
+  }
+
+  /**
+   * Creates and initializes the console system
+   */
+  public GameEngine createConsole() {
+    if (console == null) {
+      console = new Console(this);
+
+      // Set up key event handling for the console
+      inputManager.addKeyListener(e -> {
+        if (console.isVisible()) {
+          console.handleKeyInput(e);
+          return true; // Consume the event when console is open
+        }
+        return false;
+      });
+
+      // Set up key typed event handling
+      inputManager.addKeyTypedListener(e -> {
+        if (console.isVisible()) {
+          console.handleTypedKey(e.getKeyChar());
+          return true;
+        }
+        return false;
+      });
+
+      LOGGER.info("Console system initialized");
+    }
+    return this;
+  }
+
+  /**
+   * Toggle console visibility
+   */
+  public GameEngine toggleConsole() {
+    if (console == null) {
+      createConsole();
+    }
+    console.toggleVisibility();
+    LOGGER.info("Console visibility: " + console.isVisible());
+    return this;
+  }
+
+  /**
+   * Render any additional engine overlays like console
+   * Implementation of OverlayRenderer interface
+   */
+  @Override
+  public void renderOverlays(Graphics2D g) {
+    if (console != null && console.isVisible()) {
+      console.render(g, window.getWidth());
+    }
   }
 
   /**

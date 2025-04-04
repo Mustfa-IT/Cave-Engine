@@ -16,9 +16,9 @@ import com.engine.entity.EntityFactory.PhysicsParameters;
 import com.engine.scene.TestScene;
 import com.engine.scene.TestScene2;
 
-import org.jbox2d.dynamics.BodyType;
-
 import dev.dominion.ecs.api.Entity;
+
+import org.jbox2d.dynamics.BodyType;
 
 public class Main {
   public static void main(String[] args) {
@@ -35,11 +35,15 @@ public class Main {
         .createCamera(0, 0, 1.0f)
         .createScene("test", () -> new TestScene(game.getEntityFactory()))
         .createScene("test2", () -> new TestScene2(game.getEntityFactory()))
+        .createDebugOverlay() // Add debug overlay
         .setActiveScene("test2")
         .start();
 
     // Set up input handlers for creating custom GameObjects
     setupInputHandlers(game);
+
+    // Create UI elements for controlling the engine
+    setupUIControls(game);
   }
 
   /**
@@ -64,6 +68,12 @@ public class Main {
     // Scene switching
     inputManager.onKeyPress(KeyEvent.VK_1, e -> game.setActiveScene("test"));
     inputManager.onKeyPress(KeyEvent.VK_2, e -> game.setActiveScene("test2"));
+
+    // Debug overlay toggle with F3
+    inputManager.onKeyPress(KeyEvent.VK_F3, e -> game.toggleDebugOverlay());
+
+    // Console toggle with backquote/tilde
+    inputManager.onKeyPress(KeyEvent.VK_BACK_QUOTE, e -> game.toggleConsole());
 
     // Screenshot with F12
     inputManager.onKeyPress(KeyEvent.VK_F12,
@@ -102,6 +112,21 @@ public class Main {
 
       // Then add physics to it
       entityFactory.addBoxPhysics(entity, 40, 40, BodyType.DYNAMIC, 0.5f, 0.3f, 0.8f);
+    });
+  }
+
+  /**
+   * Sets up UI controls for the engine
+   */
+  private static void setupUIControls(GameEngine game) {
+    var uiSystem = game.getUiSystem();
+
+    // Create gravity slider
+    dev.dominion.ecs.api.Entity gravitySlider = uiSystem.createSlider("Gravity", 20, 50, 150, 20, 0, 20, 9.8f);
+
+    // Set callback for when value changes
+    uiSystem.setSliderCallback(gravitySlider, (value) -> {
+      game.getPhysicsWorld().setGravity(new org.jbox2d.common.Vec2(0, -value));
     });
   }
 

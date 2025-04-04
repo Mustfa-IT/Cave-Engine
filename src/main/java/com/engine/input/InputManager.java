@@ -7,9 +7,12 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 import com.engine.core.CameraSystem;
@@ -39,6 +42,10 @@ public class InputManager {
   private final Map<Integer, Consumer<MouseEvent>> mouseButtonCallbacks = new HashMap<>();
   private Consumer<Point> mouseMoveCallback = null;
 
+  // Custom key handlers
+  private final List<Function<KeyEvent, Boolean>> keyListeners = new ArrayList<>();
+  private final List<Function<KeyEvent, Boolean>> keyTypedListeners = new ArrayList<>();
+
   public InputManager(GameWindow window, CameraSystem cameraSystem) {
     this.window = window;
     this.cameraSystem = cameraSystem;
@@ -53,6 +60,11 @@ public class InputManager {
     KeyListener keyListener = new KeyAdapter() {
       @Override
       public void keyPressed(KeyEvent e) {
+        // First check if any custom listeners want to consume this event
+        if (processKeyEvent(e, keyListeners)) {
+          return;
+        }
+
         int keyCode = e.getKeyCode();
         keyStates.put(keyCode, true);
 
@@ -63,7 +75,18 @@ public class InputManager {
       }
 
       @Override
+      public void keyTyped(KeyEvent e) {
+        // Check if any custom listeners want to consume this event
+        processKeyEvent(e, keyTypedListeners);
+      }
+
+      @Override
       public void keyReleased(KeyEvent e) {
+        // First check if any custom listeners want to consume this event
+        if (processKeyEvent(e, keyListeners)) {
+          return;
+        }
+
         int keyCode = e.getKeyCode();
         keyStates.put(keyCode, false);
 
@@ -120,6 +143,18 @@ public class InputManager {
     window.addMouseListener(mouseAdapter);
 
     LOGGER.info("Input manager initialized");
+  }
+
+  /**
+   * Process key events through listeners, return true if consumed
+   */
+  private boolean processKeyEvent(KeyEvent e, List<Function<KeyEvent, Boolean>> listeners) {
+    for (Function<KeyEvent, Boolean> listener : listeners) {
+      if (listener.apply(e)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -215,5 +250,27 @@ public class InputManager {
     keyReleaseCallbacks.clear();
     mouseButtonCallbacks.clear();
     mouseMoveCallback = null;
+  }
+
+  /**
+   * Add a general key event listener
+   *
+   * @param listener The listener that returns true if it consumed the event
+   */
+  public void addKeyListener(Function<KeyEvent, Boolean> listener) {
+    if (listener != null) {
+      keyListeners.add(listener);
+    }
+  }
+
+  /**
+   * Add a listener specifically for KEY_TYPED events
+   *
+   * @param listener The listener that returns true if it consumed the event
+   */
+  public void addKeyTypedListener(Function<KeyEvent, Boolean> listener) {
+    if (listener != null) {
+      keyTypedListeners.add(listener);
+    }
   }
 }

@@ -3,6 +3,7 @@ package com.engine.ui;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.logging.Logger;
+import java.util.function.Consumer;
 
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
@@ -23,6 +24,7 @@ public class UISystem {
   private EntityRegistrar currentRegistrar;
   private UIElement hoveredElement;
   private UIElement focusedElement;
+  private UIElement draggedElement;
 
   public UISystem(GameWindow window, Dominion ecs) {
     this.window = window;
@@ -57,6 +59,11 @@ public class UISystem {
       @Override
       public void mouseReleased(MouseEvent e) {
         handleMouseRelease(e.getX(), e.getY());
+      }
+
+      @Override
+      public void mouseDragged(MouseEvent e) {
+        handleMouseDrag(e.getX(), e.getY());
       }
     };
 
@@ -124,6 +131,44 @@ public class UISystem {
   }
 
   /**
+   * Factory method to create a slider
+   */
+  public Entity createSlider(String label, float x, float y, float width, float height,
+      float minValue, float maxValue, float initialValue) {
+    Slider slider = new Slider(label, x, y, width, height, minValue, maxValue, initialValue);
+    Entity entity = ecs.createEntity(
+        "ui_slider_" + label,
+        new UIComponent(slider),
+        new Transform(x, y, 0, 1, 1));
+    return registerWithRegistrar(entity);
+  }
+
+  /**
+   * Set a callback for when a slider's value changes
+   */
+  public void setSliderCallback(Entity sliderEntity, Consumer<Float> callback) {
+    if (sliderEntity == null)
+      return;
+
+    UIComponent uiComp = sliderEntity.get(UIComponent.class);
+    if (uiComp != null && uiComp.getUi() instanceof Slider) {
+      ((Slider) uiComp.getUi()).setOnValueChanged(callback);
+    }
+  }
+
+  /**
+   * Factory method to create a debug overlay
+   */
+  public Entity createDebugOverlay(float x, float y) {
+    DebugOverlay overlay = new DebugOverlay(x, y, 200, 100);
+    Entity entity = ecs.createEntity(
+        "ui_debug_overlay",
+        new UIComponent(overlay),
+        new Transform(x, y, 0, 1, 1));
+    return registerWithRegistrar(entity);
+  }
+
+  /**
    * Add a UI element to an existing panel
    */
   public void addToPanel(Entity panelEntity, Entity elementEntity) {
@@ -181,6 +226,14 @@ public class UISystem {
    * Handle mouse press events
    */
   private void handleMousePress(int x, int y) {
+    UIElement clickedElement = findElementAt(x, y);
+
+    if (clickedElement instanceof Slider) {
+      if (((Slider) clickedElement).startDrag(x, y)) {
+        draggedElement = clickedElement;
+      }
+    }
+
     // Could be used for drag operations or visual feedback
   }
 
@@ -188,7 +241,19 @@ public class UISystem {
    * Handle mouse release events
    */
   private void handleMouseRelease(int x, int y) {
-    // Could be used for drag operations
+    if (draggedElement instanceof Slider) {
+      ((Slider) draggedElement).stopDrag();
+    }
+    draggedElement = null;
+  }
+
+  /**
+   * Handle mouse drag events
+   */
+  private void handleMouseDrag(int x, int y) {
+    if (draggedElement instanceof Slider) {
+      ((Slider) draggedElement).handleMouseDrag(x, y);
+    }
   }
 
   /**

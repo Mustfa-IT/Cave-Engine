@@ -17,7 +17,6 @@ import com.engine.components.Transform;
 import com.engine.components.UIComponent;
 import com.engine.components.GameObjectComponent;
 import com.engine.core.CameraSystem;
-import com.engine.core.GameEngine;
 import com.engine.core.GameWindow;
 
 import dev.dominion.ecs.api.Dominion;
@@ -28,12 +27,13 @@ public class RenderSystem implements RenderingSystem {
   private final GameWindow window;
   private final Dominion world;
   private final CameraSystem cameraSystem;
-  private static final Logger LOGGER = Logger.getLogger(GameEngine.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(RenderSystem.class.getName());
 
   // Debug visualization flags
   private boolean debugPhysics = false;
   private boolean debugColliders = false;
   private boolean showGrid = true;
+  private OverlayRenderer overlayRenderer;
 
   @Inject
   public RenderSystem(GameWindow window, Dominion world, CameraSystem cameraSystem) {
@@ -43,6 +43,13 @@ public class RenderSystem implements RenderingSystem {
     // Ensure the window is visible before creating the BufferStrategy
     window.initialize();
     window.createBufferStrategy(2);
+  }
+
+  /**
+   * Set the overlay renderer (used for console, etc)
+   */
+  public void setOverlayRenderer(OverlayRenderer overlayRenderer) {
+    this.overlayRenderer = overlayRenderer;
   }
 
   /**
@@ -108,6 +115,11 @@ public class RenderSystem implements RenderingSystem {
     Graphics2D uiG = (Graphics2D) g.create();
     renderUI(uiG);
     uiG.dispose();
+
+    // Render console and other overlays via the interface
+    if (overlayRenderer != null) {
+      overlayRenderer.renderOverlays(g);
+    }
 
     // Clean up and display
     g.dispose();
