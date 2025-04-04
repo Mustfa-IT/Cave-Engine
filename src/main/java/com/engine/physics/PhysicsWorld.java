@@ -30,9 +30,8 @@ public class PhysicsWorld extends World implements PhysicsSystem {
 
   @Inject
   public PhysicsWorld(Vec2 gravity, Dominion ecs) {
-    // In Box2D, positive Y is up. In screen coordinates, positive Y is down.
-    // We need to make gravity work correctly in screen coordinates
-    super(new Vec2(gravity.x, gravity.y)); // Invert Y gravity for Box2D
+    // Box2D uses Y+ up, which now matches our coordinate system
+    super(gravity); // No need to invert gravity anymore
     this.ecs = ecs;
     LOGGER.info("Physics world initialized with gravity: " + gravity.x + ", " + gravity.y);
     initializePhysicsBodies();
@@ -90,7 +89,7 @@ public class PhysicsWorld extends World implements PhysicsSystem {
       float angle = body.getAngle();
 
       // Convert from physics world to render world
-      // Note that in Box2D Y+ is up, and in screen space Y+ is down
+      // Both Box2D and our render system now use Y+ up
       float worldX = position.x * worldUnitsPerMeter;
       float worldY = position.y * worldUnitsPerMeter;
 

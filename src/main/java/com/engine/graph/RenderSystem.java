@@ -53,7 +53,7 @@ public class RenderSystem implements RenderingSystem {
     g.clearRect(0, 0, window.getWidth(), window.getHeight());
 
     // Draw world grid for reference (optional)
-    // drawWorldGrid(g);
+    drawWorldGrid(g);
 
     // Get the camera-transformed graphics context
     Entity camera = cameraSystem.getActiveCamera();
@@ -136,7 +136,7 @@ public class RenderSystem implements RenderingSystem {
     g2d.drawLine(-1000, 0, 1000, 0); // X-axis
 
     g2d.setColor(Color.GREEN);
-    g2d.drawLine(0, -1000, 0, 1000); // Y-axis
+    g2d.drawLine(0, -1000, 0, 1000); // Y-axis (now points up)
 
     // Draw origin marker
     g2d.setColor(Color.WHITE);

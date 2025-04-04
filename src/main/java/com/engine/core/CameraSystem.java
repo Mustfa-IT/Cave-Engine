@@ -93,12 +93,14 @@ public class CameraSystem {
 
     Graphics2D g2d = (Graphics2D) g.create();
 
-
+    // Translate to the viewport center
     g2d.translate(cam.getViewportX() + cam.getViewportWidth() / 2.0,
         cam.getViewportY() + cam.getViewportHeight() / 2.0);
 
-    g2d.scale(cam.getZoom(), cam.getZoom());
+    // Scale with Y flipped to make positive Y point up
+    g2d.scale(cam.getZoom(), -cam.getZoom());
 
+    // Translate to camera position
     g2d.translate(-transform.getX(), -transform.getY());
 
     return g2d;
@@ -123,11 +125,12 @@ public class CameraSystem {
 
     // Adjust for viewport position
     screenX -= (cam.getViewportX() + cam.getViewportWidth() / 2.0);
-    screenY -= (cam.getViewportY() + cam.getViewportHeight() / 2.0);
+    // Flip Y coordinate - viewport center is (0,0), up is negative in screen space
+    screenY =(float) (cam.getViewportY() + cam.getViewportHeight() / 2.0) - screenY;
 
     // Apply inverse zoom
     screenX /= cam.getZoom();
-    screenY /= cam.getZoom(); // No Y-inversion anymore
+    screenY /= cam.getZoom();
 
     // Apply camera position offset
     screenX += transform.getX();
@@ -159,11 +162,11 @@ public class CameraSystem {
 
     // Apply zoom
     worldX *= cam.getZoom();
-    worldY *= cam.getZoom(); // No Y-inversion anymore
+    worldY *= cam.getZoom();
 
-    // Adjust for viewport position
+    // Adjust for viewport position and flip Y
     worldX += (cam.getViewportX() + cam.getViewportWidth() / 2.0);
-    worldY += (cam.getViewportY() + cam.getViewportHeight() / 2.0);
+    worldY = (float) (cam.getViewportY() + cam.getViewportHeight() / 2.0) - worldY;
 
     return new float[] { worldX, worldY };
   }

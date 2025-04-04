@@ -18,20 +18,19 @@ public class TestScene2 extends Scene {
   public void initialize() {
     startTime = System.currentTimeMillis();
 
-    // In screen space (Y+ is down), so positive Y values are below center
-    // Create ground near the bottom of the screen
-    entityFactory.createGround(0, 300, 800, 20, Color.GRAY);
+    // With Y+ up, create ground near the bottom of the screen
+    entityFactory.createGround(0, -300, 800, 20, Color.GRAY);
 
-    // Create balls - negative Y values are above the center
+    // Create balls - positive Y values are now above the center
     // Create a central red ball above the ground
-    entityFactory.createBall(0, 100, 25, Color.RED, 1.0f, 0.3f, 0.5f);
+    entityFactory.createBall(0, -100, 25, Color.RED, 1.0f, 0.3f, 0.5f);
 
     // Create a few more balls at different positions
     entityFactory.createBall(-200, 0, 20, Color.BLUE, 1.0f, 0.3f, 0.7f);
     entityFactory.createBall(200, 0, 20, Color.GREEN, 1.0f, 0.3f, 0.7f);
 
     // Stationary platform in the middle
-    entityFactory.createGround(-200, 200, 200, 20, Color.LIGHT_GRAY);
+    entityFactory.createGround(-200, -200, 200, 20, Color.LIGHT_GRAY);
 
     System.out.println("TestScene 2 initialized");
   }

@@ -88,7 +88,7 @@ public class GameEngine {
 
       // Create camera at world origin (0,0)
       this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 0, 0);
-
+      this.cameraSystem.updateAllViewports(window.getWidth(), window.getHeight());
       // Create scene manager with reference to engine, entity factory, and UI system
       this.sceneManager = new SceneManager(this, entityFactory, uiSystem);
 
