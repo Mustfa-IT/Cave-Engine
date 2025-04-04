@@ -2,18 +2,15 @@ package com.engine.scene;
 
 import java.awt.Color;
 
-import javax.inject.Inject;
-
-import com.engine.assets.AssetManager;
 import com.engine.entity.EntityFactory;
 
 /**
  * A test scene with basic physics objects
  */
-public class TestScene extends Scene {
+public class SimpleScene extends Scene {
   long startTime;
 
-  public TestScene(EntityFactory entityFactory) {
+  public SimpleScene(EntityFactory entityFactory) {
     super(entityFactory);
   }
 

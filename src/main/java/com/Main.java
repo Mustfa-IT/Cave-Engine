@@ -7,16 +7,10 @@ import java.io.File;
 
 import com.engine.core.GameEngine;
 import com.engine.core.AbstractGameObject;
-import com.engine.di.DaggerEngineComponent;
-import com.engine.di.EngineComponent;
-import com.engine.di.EngineModule;
 import com.engine.gameobject.GameObject;
-import com.engine.physics.Collision;
-import com.engine.entity.EntityFactory;
 import com.engine.entity.EntityFactory.PhysicsParameters;
-import com.engine.scene.TestScene;
+import com.engine.scene.SimpleScene;
 import com.engine.events.GameEvent;
-import com.engine.assets.AssetManager;
 
 import dev.dominion.ecs.api.Entity;
 
@@ -41,7 +35,7 @@ public class Main {
         .gravity(0, -9.8f)
         .windowTitle("Enhanced Physics Engine"))
         .createCamera(0, 0, 1.0f)
-        .createScene("test", () -> new TestScene(game.getEntityFactory()))
+        .createScene("test", () -> new SimpleScene(game.getEntityFactory()))
         .createDebugOverlay(); // Add debug overlay
 
     // Set active scene after all scenes are created
