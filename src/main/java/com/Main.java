@@ -31,7 +31,7 @@ public class Main {
     }
 
     // Use Dagger to create the engine with simplified initialization
-    GameEngine game = createEngine();
+    GameEngine game = GameEngine.createEngine();
 
     // Configure the engine with enhanced fluent API
     game.configure(config -> config
@@ -275,15 +275,4 @@ public class Main {
 
   }
 
-  /**
-   * Creates and initializes the game engine
-   *
-   * @return Configured GameEngine instance
-   */
-  private static GameEngine createEngine() {
-    EngineComponent engineComponent = DaggerEngineComponent.builder()
-        .concreteModule(new EngineModule.ConcreteModule())
-        .build();
-    return engineComponent.engine();
-  }
 }

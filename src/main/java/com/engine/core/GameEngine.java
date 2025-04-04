@@ -2,6 +2,9 @@ package com.engine.core;
 
 import com.engine.components.CameraComponent;
 import com.engine.components.UIComponent;
+import com.engine.di.DaggerEngineComponent;
+import com.engine.di.EngineComponent;
+import com.engine.di.EngineModule;
 import com.engine.components.GameObjectComponent;
 import com.engine.entity.EntityFactory;
 import com.engine.graph.OverlayRenderer;
@@ -748,4 +751,12 @@ public class GameEngine implements OverlayRenderer {
   public AnimationSystem getAnimationSystem() {
     return animationSystem;
   }
+
+  public static GameEngine createEngine() {
+    EngineComponent engineComponent = DaggerEngineComponent.builder()
+        .concreteModule(new EngineModule.ConcreteModule())
+        .build();
+    return engineComponent.engine();
+  }
+
 }

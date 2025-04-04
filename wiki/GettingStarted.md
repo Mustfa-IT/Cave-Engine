@@ -5,30 +5,12 @@ This guide will help you set up and start using the Java 2D Physics Engine.
 ## Prerequisites
 
 - Java 11 or higher
-- Maven or Gradle for dependency management
-- Basic understanding of Entity Component Systems (ECS)
+- Maven for dependency management
+- Basic understanding of Entity Component Systems (ECS) (Just Now How they work)
 
 ## Installation
 
-### Maven
-
-Add the following to your `pom.xml`:
-
-```xml
-<dependency>
-  <groupId>com.engine</groupId>
-  <artifactId>java2dphysics</artifactId>
-  <version>1.0.0</version>
-</dependency>
-```
-
-### Gradle
-
-Add the following to your `build.gradle`:
-
-```groovy
-implementation 'com.engine:java2dphysics:1.0.0'
-```
+First, clone or download the repository. Then, create a new folder for your game within the project structure, referencing the engine’s code to access its functionality.
 
 ## Basic Structure
 
@@ -44,69 +26,48 @@ A typical application using this engine has the following components:
 Here's a minimal example to get started:
 
 ```java
-import com.engine.core.GameWindow;
-import com.engine.ui.UISystem;
-import com.engine.entity.EntityRegistrar;
-import com.engine.entity.SceneManager;
-import dev.dominion.ecs.api.Dominion;
+import com.engine.core.GameEngine;
+import com.engine.di.DaggerEngineComponent;
+import com.engine.di.EngineComponent;
+import com.engine.di.EngineModule;
+import com.engine.scene.SimpleScene;
 
 public class MyGame {
-    private GameWindow window;
-    private Dominion ecs;
-    private SceneManager sceneManager;
-    private UISystem uiSystem;
+    private GameEngine engine;
 
     public MyGame() {
-        // Create window
-        window = new GameWindow("My Physics Game", 800, 600);
+        // Create the engine using DI
+        engine = GameEngine.createEngine();
 
-        // Create ECS
-        ecs = Dominion.create();
+        // Configure the engine with fluent API
+        engine.configure(config -> config
+            .targetFps(60)
+            .showPerformanceStats(true)
+            .debugMode(false, true, true)
+            .gravity(0, -9.8f)
+            .windowTitle("My CaveEngine Game"))
+            .createCamera(0, 0, 1.0f)
+            .createScene("main", () -> new SimpleScene(engine.getEntityFactory()))
+            .createDebugOverlay();
 
-        // Create scene manager
-        sceneManager = new SceneManager(ecs);
-
-        // Create UI system
-        uiSystem = new UISystem(window, ecs);
-
-        // Set up first scene
-        setupMainScene();
-
-        // Start game loop
-        gameLoop();
-    }
-
-    private void setupMainScene() {
-        EntityRegistrar mainScene = sceneManager.createScene("main");
-        uiSystem.setCurrentRegistrar(mainScene);
+        // Set active scene
+        engine.setActiveScene("main");
 
         // Create UI elements
-        uiSystem.createLabel("Hello World", 350, 100);
-        uiSystem.createButton("Click Me", 350, 200, 100, 40);
+        setupUI();
+
+        // Start the game loop
+        engine.start();
     }
 
-    private void gameLoop() {
-        long lastTime = System.nanoTime();
-        double delta = 0;
+    private void setupUI() {
+        var uiSystem = engine.getUiSystem();
 
-        while (true) {
-            long now = System.nanoTime();
-            delta = (now - lastTime) / 1_000_000_000.0;
-            lastTime = now;
+        // Create a button
+        uiSystem.createButton("Click Me", 350, 200, 100, 40);
 
-            // Update systems
-            uiSystem.update(delta);
-
-            // Render
-            window.clear();
-            window.render();
-
-            try {
-                Thread.sleep(16); // ~60 FPS
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        // Create a label
+        uiSystem.createLabel("Hello World", 350, 100);
     }
 
     public static void main(String[] args) {
