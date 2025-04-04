@@ -40,10 +40,24 @@ public class EditorExample {
       return false;
     });
 
-    // Layout save/load shortcuts
+    // Enhanced layout save/load shortcuts
     game.getInputManager().onKeyPress(KeyEvent.VK_S, e -> {
       if (editor.isActive() && e.isControlDown()) {
-        editor.saveLayout("default");
+        if (e.isShiftDown()) {
+          // Show layout name dialog
+          String name = javax.swing.JOptionPane.showInputDialog(
+              game.getGameFrame(),
+              "Enter layout name:",
+              "Save Layout",
+              javax.swing.JOptionPane.QUESTION_MESSAGE);
+
+          if (name != null && !name.trim().isEmpty()) {
+            editor.saveLayout(name.trim());
+          }
+        } else {
+          // Quick save with default name
+          editor.saveLayout("default");
+        }
         return true; // Consume the event
       }
       return false;
@@ -51,7 +65,76 @@ public class EditorExample {
 
     game.getInputManager().onKeyPress(KeyEvent.VK_L, e -> {
       if (editor.isActive() && e.isControlDown()) {
-        editor.loadLayout("default");
+        if (e.isShiftDown()) {
+          // Show layout selection dialog
+          String[] layouts = editor.listAvailableLayouts();
+          if (layouts.length == 0) {
+            javax.swing.JOptionPane.showMessageDialog(
+                game.getGameFrame(),
+                "No saved layouts found.",
+                "Load Layout",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+          } else {
+            String selected = (String) javax.swing.JOptionPane.showInputDialog(
+                game.getGameFrame(),
+                "Select a layout to load:",
+                "Load Layout",
+                javax.swing.JOptionPane.QUESTION_MESSAGE,
+                null,
+                layouts,
+                layouts[0]);
+
+            if (selected != null) {
+              editor.loadLayout(selected);
+            }
+          }
+        } else {
+          // Quick load default layout
+          editor.loadLayout("default");
+        }
+        return true; // Consume the event
+      }
+      return false;
+    });
+
+    // Theme save/load shortcuts
+    game.getInputManager().onKeyPress(KeyEvent.VK_T, e -> {
+      if (editor.isActive() && e.isControlDown()) {
+        if (e.isShiftDown()) {
+          // Save theme dialog
+          String name = javax.swing.JOptionPane.showInputDialog(
+              game.getGameFrame(),
+              "Enter theme name:",
+              "Save Theme",
+              javax.swing.JOptionPane.QUESTION_MESSAGE);
+
+          if (name != null && !name.trim().isEmpty()) {
+            editor.saveTheme(name.trim());
+          }
+        } else {
+          // Load theme dialog
+          String[] themes = editor.listAvailableThemes();
+          if (themes.length == 0) {
+            javax.swing.JOptionPane.showMessageDialog(
+                game.getGameFrame(),
+                "No saved themes found.",
+                "Load Theme",
+                javax.swing.JOptionPane.INFORMATION_MESSAGE);
+          } else {
+            String selected = (String) javax.swing.JOptionPane.showInputDialog(
+                game.getGameFrame(),
+                "Select a theme to load:",
+                "Load Theme",
+                javax.swing.JOptionPane.QUESTION_MESSAGE,
+                null,
+                themes,
+                themes[0]);
+
+            if (selected != null) {
+              editor.loadTheme(selected);
+            }
+          }
+        }
         return true; // Consume the event
       }
       return false;
@@ -81,6 +164,7 @@ public class EditorExample {
 
     // Create scene hierarchy panel
     EditorPanel hierarchyPanel = editor.createPanel(10, 320, 200, 250, "Hierarchy");
+
     // Create inspector panel
     EditorPanel inspectorPanel = editor.createPanel(
         game.getGameFrame().getWidth() - 210,
@@ -109,7 +193,9 @@ public class EditorExample {
 
     System.out.println("Editor setup complete. Press F1 to toggle editor.");
     System.out.println("F2: Toggle Grid, F3: Toggle Snapping, F4: Toggle Theme");
-    System.out.println("Ctrl+S: Save Layout, Ctrl+L: Load Layout");
+    System.out.println("Ctrl+S: Quick Save Layout, Ctrl+Shift+S: Save Layout As");
+    System.out.println("Ctrl+L: Quick Load Layout, Ctrl+Shift+L: Browse Layouts");
+    System.out.println("Ctrl+T: Load Theme, Ctrl+Shift+T: Save Current Theme");
   }
 
   /**

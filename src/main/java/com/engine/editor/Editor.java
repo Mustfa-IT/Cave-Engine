@@ -143,7 +143,7 @@ public class Editor {
    */
   private EditorPanel findPanelForResize(int x, int y, List<EditorElement> elements) {
     // Create a copy if this is the main elements list
-    List<EditorElement> elementsCopy =  new ArrayList<>(elements);
+    List<EditorElement> elementsCopy = new ArrayList<>(elements);
 
     // Check from top to bottom (last element drawn is on top)
     for (int i = elementsCopy.size() - 1; i >= 0; i--) {
@@ -442,6 +442,9 @@ public class Editor {
     enableSnapping = !enableSnapping;
   }
 
+  // Theme management
+  private static final String THEMES_DIRECTORY = "editorThemes/";
+
   /**
    * Set the current theme for all panels
    */
@@ -459,13 +462,141 @@ public class Editor {
   }
 
   /**
-   * Toggle between available themes
+   * Cycle through all available themes
    */
   public void cycleTheme() {
-    if (currentTheme == EditorTheme.DEFAULT) {
-      setTheme(EditorTheme.LIGHT);
-    } else {
-      setTheme(EditorTheme.DEFAULT);
+    String[] themes = listAvailableThemes();
+
+    if (themes.length == 0) {
+      // Fall back to built-in themes
+      if (currentTheme == EditorTheme.DEFAULT) {
+        setTheme(EditorTheme.LIGHT);
+      } else {
+        setTheme(EditorTheme.DEFAULT);
+      }
+      return;
+    }
+
+    // Find the current theme in the list or start with the first one
+    int currentIndex = -1;
+    String currentThemeName = currentTheme.getName();
+
+    for (int i = 0; i < themes.length; i++) {
+      if (themes[i].equals(currentThemeName)) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    // Move to the next theme or back to the first
+    currentIndex = (currentIndex + 1) % themes.length;
+    loadTheme(themes[currentIndex]);
+  }
+
+  /**
+   * Save current theme to a file
+   */
+  public void saveTheme(String name) {
+    try {
+      // Create themes directory if it doesn't exist
+      Files.createDirectories(Paths.get(THEMES_DIRECTORY));
+
+      File file = new File(THEMES_DIRECTORY + name + ".theme");
+      try (FileWriter writer = new FileWriter(file)) {
+        // Write theme properties
+        writer.write("name=" + currentTheme.getName() + "\n");
+        writer.write("backgroundColor=" + colorToHex(currentTheme.getBackgroundColor()) + "\n");
+        writer.write("headerColor=" + colorToHex(currentTheme.getHeaderColor()) + "\n");
+        writer.write("textColor=" + colorToHex(currentTheme.getTextColor()) + "\n");
+        writer.write("borderColor=" + colorToHex(currentTheme.getBorderColor()) + "\n");
+      }
+      LOGGER.info("Theme saved: " + name);
+    } catch (Exception e) {
+      LOGGER.warning("Failed to save theme: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Load theme from a file
+   */
+  public void loadTheme(String name) {
+    try {
+      File file = new File(THEMES_DIRECTORY + name + ".theme");
+      if (!file.exists()) {
+        LOGGER.warning("Theme file not found: " + name);
+        return;
+      }
+
+      // Create a properties object to load the theme
+      java.util.Properties props = new java.util.Properties();
+      try (FileReader reader = new FileReader(file)) {
+        props.load(reader);
+      }
+
+      // Create a new theme from the properties
+      String themeName = props.getProperty("name", name);
+      java.awt.Color bgColor = hexToColor(props.getProperty("backgroundColor", "#222222"));
+      java.awt.Color headerColor = hexToColor(props.getProperty("headerColor", "#333333"));
+      java.awt.Color textColor = hexToColor(props.getProperty("textColor", "#FFFFFF"));
+      java.awt.Color borderColor = hexToColor(props.getProperty("borderColor", "#444444"));
+
+      EditorTheme theme = new EditorTheme(themeName, bgColor, headerColor, textColor, borderColor);
+      setTheme(theme);
+
+      LOGGER.info("Theme loaded: " + name);
+    } catch (Exception e) {
+      LOGGER.warning("Failed to load theme: " + e.getMessage());
+    }
+  }
+
+  /**
+   * Get a list of available theme names
+   */
+  public String[] listAvailableThemes() {
+    List<String> themes = new ArrayList<>();
+    try {
+      // Create themes directory if it doesn't exist
+      Files.createDirectories(Paths.get(THEMES_DIRECTORY));
+
+      File themeDir = new File(THEMES_DIRECTORY);
+      File[] themeFiles = themeDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".theme"));
+
+      if (themeFiles != null) {
+        for (File file : themeFiles) {
+          String themeName = file.getName();
+          // Remove .theme extension
+          themeName = themeName.substring(0, themeName.length() - 6);
+          themes.add(themeName);
+        }
+      }
+    } catch (Exception e) {
+      LOGGER.warning("Error listing themes: " + e.getMessage());
+    }
+    return themes.toArray(new String[0]);
+  }
+
+  /**
+   * Convert color to hex string
+   */
+  private String colorToHex(java.awt.Color color) {
+    return String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
+  }
+
+  /**
+   * Convert hex string to color
+   */
+  private java.awt.Color hexToColor(String hex) {
+    if (hex == null || !hex.startsWith("#")) {
+      return java.awt.Color.BLACK;
+    }
+    try {
+      return new java.awt.Color(
+          Integer.parseInt(hex.substring(1, 3), 16),
+          Integer.parseInt(hex.substring(3, 5), 16),
+          Integer.parseInt(hex.substring(5, 7), 16));
+    } catch (Exception e) {
+      LOGGER.warning("Invalid hex color: " + hex);
+      return java.awt.Color.BLACK;
     }
   }
 
@@ -474,23 +605,42 @@ public class Editor {
    */
   public void saveLayout(String name) {
     try {
+      // Create layouts directory if it doesn't exist
+      Files.createDirectories(Paths.get(LAYOUTS_DIRECTORY));
+
       File file = new File(LAYOUTS_DIRECTORY + name + ".layout");
       try (FileWriter writer = new FileWriter(file)) {
+        // Write layout version and theme
+        writer.write("version=1.0\n");
+        writer.write("theme=" + currentTheme.getName() + "\n");
+
         // Write number of elements
-        writer.write(elements.size() + "\n");
+        int panelCount = 0;
+        synchronized (elements) {
+          for (EditorElement element : elements) {
+            if (element instanceof EditorPanel) {
+              panelCount++;
+            }
+          }
+        }
+
+        writer.write("panelCount=" + panelCount + "\n");
+
         // Write each element's data
         synchronized (elements) {
           for (EditorElement element : elements) {
             if (element instanceof EditorPanel) {
               EditorPanel panel = (EditorPanel) element;
-              writer.write(String.format("%s,%d,%d,%d,%d,%b,%b\n",
-                  panel.getName(),
-                  panel.getX(),
-                  panel.getY(),
-                  panel.getWidth(),
-                  panel.getHeight(),
-                  panel.isVisible(),
-                  panel.isCollapsed()));
+              writer.write(String.format("panel.name=%s\n", panel.getName()));
+              writer.write(String.format("panel.x=%d\n", panel.getX()));
+              writer.write(String.format("panel.y=%d\n", panel.getY()));
+              writer.write(String.format("panel.width=%d\n", panel.getWidth()));
+              writer.write(String.format("panel.height=%d\n", panel.getHeight()));
+              writer.write(String.format("panel.visible=%b\n", panel.isVisible()));
+              writer.write(String.format("panel.collapsed=%b\n", panel.isCollapsed()));
+              writer.write(String.format("panel.draggable=%b\n", panel.isDraggable()));
+              writer.write(String.format("panel.resizable=%b\n", panel.isResizable()));
+              writer.write("panel.end\n");
             }
           }
         }
@@ -498,6 +648,7 @@ public class Editor {
       LOGGER.info("Layout saved: " + name);
     } catch (Exception e) {
       LOGGER.warning("Failed to save layout: " + e.getMessage());
+      e.printStackTrace();
     }
   }
 
@@ -513,36 +664,102 @@ public class Editor {
       }
 
       try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-        // Read number of elements
-        int count = Integer.parseInt(reader.readLine());
-        // Map to store loaded panel data
-        Map<String, String[]> panelData = new HashMap<>();
-        // Read each element's data
-        for (int i = 0; i < count; i++) {
-          String line = reader.readLine();
-          if (line == null)
-            break;
+        // Read header
+        String versionLine = reader.readLine();
+        if (versionLine == null || !versionLine.startsWith("version=")) {
+          LOGGER.warning("Invalid layout file format");
+          return;
+        }
 
-          String[] parts = line.split(",");
-          if (parts.length >= 7) {
-            panelData.put(parts[0], parts);
+        // Read theme
+        String themeLine = reader.readLine();
+        if (themeLine != null && themeLine.startsWith("theme=")) {
+          String themeName = themeLine.substring(6);
+          // Try to load the theme if it's not a built-in one
+          if (!themeName.equals("DEFAULT") && !themeName.equals("LIGHT")) {
+            try {
+              loadTheme(themeName);
+            } catch (Exception e) {
+              LOGGER.warning("Could not load theme: " + themeName);
+            }
           }
         }
+
+        // Read panel count
+        String countLine = reader.readLine();
+        if (countLine == null || !countLine.startsWith("panelCount=")) {
+          LOGGER.warning("Invalid layout file format: missing panel count");
+          return;
+        }
+
+        // Map to store loaded panel data
+        Map<String, Map<String, String>> panelsData = new HashMap<>();
+
+        // Start reading panel data
+        String line;
+        String currentPanel = null;
+        Map<String, String> panelProps = null;
+
+        while ((line = reader.readLine()) != null) {
+          if (line.startsWith("panel.name=")) {
+            // Start of a new panel
+            currentPanel = line.substring(11);
+            panelProps = new HashMap<>();
+            panelsData.put(currentPanel, panelProps);
+          } else if (line.equals("panel.end")) {
+            // End of current panel
+            currentPanel = null;
+            panelProps = null;
+          } else if (currentPanel != null && panelProps != null && line.contains("=")) {
+            // Panel property
+            String[] parts = line.split("=", 2);
+            if (parts.length == 2) {
+              panelProps.put(parts[0], parts[1]);
+            }
+          }
+        }
+
         // Apply loaded data to existing panels
         synchronized (elements) {
           for (EditorElement element : elements) {
             if (element instanceof EditorPanel) {
-              String[] data = panelData.get(element.getName());
+              Map<String, String> data = panelsData.get(element.getName());
               if (data != null) {
-                element.setPosition(Integer.parseInt(data[1]), Integer.parseInt(data[2]));
-                EditorPanel panel = (EditorPanel) element;
-                int width = Integer.parseInt(data[3]);
-                int height = Integer.parseInt(data[4]);
-                panel.width = width;
-                panel.height = height;
-                panel.expandedHeight = height;
-                panel.setVisible(Boolean.parseBoolean(data[5]));
-                panel.setCollapsed(Boolean.parseBoolean(data[6]));
+                try {
+                  // Apply properties
+                  if (data.containsKey("panel.x") && data.containsKey("panel.y")) {
+                    element.setPosition(
+                        Integer.parseInt(data.get("panel.x")),
+                        Integer.parseInt(data.get("panel.y")));
+                  }
+
+                  EditorPanel panel = (EditorPanel) element;
+                  if (data.containsKey("panel.width") && data.containsKey("panel.height")) {
+                    int width = Integer.parseInt(data.get("panel.width"));
+                    int height = Integer.parseInt(data.get("panel.height"));
+                    panel.width = width;
+                    panel.height = height;
+                    panel.expandedHeight = height;
+                  }
+
+                  if (data.containsKey("panel.visible")) {
+                    panel.setVisible(Boolean.parseBoolean(data.get("panel.visible")));
+                  }
+
+                  if (data.containsKey("panel.collapsed")) {
+                    panel.setCollapsed(Boolean.parseBoolean(data.get("panel.collapsed")));
+                  }
+
+                  if (data.containsKey("panel.draggable")) {
+                    panel.setDraggable(Boolean.parseBoolean(data.get("panel.draggable")));
+                  }
+
+                  if (data.containsKey("panel.resizable")) {
+                    panel.setResizable(Boolean.parseBoolean(data.get("panel.resizable")));
+                  }
+                } catch (Exception e) {
+                  LOGGER.warning("Error applying properties to panel " + element.getName() + ": " + e.getMessage());
+                }
               }
             }
           }
@@ -552,7 +769,34 @@ public class Editor {
       LOGGER.info("Layout loaded: " + name);
     } catch (Exception e) {
       LOGGER.warning("Failed to load layout: " + e.getMessage());
+      e.printStackTrace();
     }
+  }
+
+  /**
+   * Get a list of available layout names
+   */
+  public String[] listAvailableLayouts() {
+    List<String> layouts = new ArrayList<>();
+    try {
+      // Create layouts directory if it doesn't exist
+      Files.createDirectories(Paths.get(LAYOUTS_DIRECTORY));
+
+      File layoutDir = new File(LAYOUTS_DIRECTORY);
+      File[] layoutFiles = layoutDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".layout"));
+
+      if (layoutFiles != null) {
+        for (File file : layoutFiles) {
+          String layoutName = file.getName();
+          // Remove .layout extension
+          layoutName = layoutName.substring(0, layoutName.length() - 7);
+          layouts.add(layoutName);
+        }
+      }
+    } catch (Exception e) {
+      LOGGER.warning("Error listing layouts: " + e.getMessage());
+    }
+    return layouts.toArray(new String[0]);
   }
 
   // Factory methods for creating common editor elements

@@ -69,7 +69,7 @@ public class EditorPanel extends AbstractEditorElement {
     g.drawRect(x, y, width, headerHeight);
 
     // Draw title
-    g.setColor(theme.getTitleColor());
+    g.setColor(theme.getTextColor());
     g.setFont(new Font("SansSerif", Font.BOLD, 12));
     g.drawString(name, x + 5, y + headerHeight - 8);
 
@@ -87,7 +87,7 @@ public class EditorPanel extends AbstractEditorElement {
     // Draw resize handles if not collapsed and resizable
     if (!collapsed && resizable) {
       g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
-      g.setColor(theme.getResizeHandleColor());
+      g.setColor(theme.getBorderColor());
 
       // Bottom-right corner resize handle
       g.fillRect(x + width - 10, y + height - 10, 10, 10);

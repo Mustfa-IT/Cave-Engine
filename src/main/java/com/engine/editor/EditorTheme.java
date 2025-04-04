@@ -2,49 +2,42 @@ package com.engine.editor;
 
 import java.awt.Color;
 
+/**
+ * Defines visual styles for the editor UI components
+ */
 public class EditorTheme {
-  private String name;
-  private Color backgroundColor;
-  private Color headerColor;
-  private Color borderColor;
-  private Color titleColor;
-  private Color textColor;
-  private Color selectionColor;
-  private Color resizeHandleColor;
-
-  // Default dark theme
+  // Default built-in themes
   public static final EditorTheme DEFAULT = new EditorTheme(
-      "Dark",
-      new Color(40, 40, 40, 220),
-      new Color(60, 60, 60),
-      new Color(100, 100, 100),
-      Color.WHITE,
-      Color.LIGHT_GRAY,
-      new Color(65, 105, 225),
-      new Color(200, 200, 200, 150));
+      "DEFAULT",
+      new Color(40, 40, 40, 220), // background
+      new Color(60, 60, 60, 220), // header
+      new Color(220, 220, 220), // text
+      new Color(80, 80, 80) // border
+  );
 
-  // Light theme
   public static final EditorTheme LIGHT = new EditorTheme(
-      "Light",
-      new Color(240, 240, 240, 220),
-      new Color(220, 220, 220),
-      new Color(180, 180, 180),
-      Color.BLACK,
-      Color.DARK_GRAY,
-      new Color(51, 153, 255),
-      new Color(120, 120, 120, 150));
+      "LIGHT",
+      new Color(220, 220, 220, 220), // background
+      new Color(200, 200, 200, 220), // header
+      new Color(20, 20, 20), // text
+      new Color(150, 150, 150) // border
+  );
 
-  public EditorTheme(String name, Color backgroundColor, Color headerColor,
-      Color borderColor, Color titleColor, Color textColor,
-      Color selectionColor, Color resizeHandleColor) {
+  private final String name;
+  private final Color backgroundColor;
+  private final Color headerColor;
+  private final Color textColor;
+  private final Color borderColor;
+
+  /**
+   * Create a new custom theme
+   */
+  public EditorTheme(String name, Color backgroundColor, Color headerColor, Color textColor, Color borderColor) {
     this.name = name;
     this.backgroundColor = backgroundColor;
     this.headerColor = headerColor;
-    this.borderColor = borderColor;
-    this.titleColor = titleColor;
     this.textColor = textColor;
-    this.selectionColor = selectionColor;
-    this.resizeHandleColor = resizeHandleColor;
+    this.borderColor = borderColor;
   }
 
   public String getName() {
@@ -59,23 +52,11 @@ public class EditorTheme {
     return headerColor;
   }
 
-  public Color getBorderColor() {
-    return borderColor;
-  }
-
-  public Color getTitleColor() {
-    return titleColor;
-  }
-
   public Color getTextColor() {
     return textColor;
   }
 
-  public Color getSelectionColor() {
-    return selectionColor;
-  }
-
-  public Color getResizeHandleColor() {
-    return resizeHandleColor;
+  public Color getBorderColor() {
+    return borderColor;
   }
 }
