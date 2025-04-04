@@ -1,11 +1,17 @@
 package com.engine.core;
 
+import java.awt.Graphics;
+import java.awt.Rectangle;
+import java.awt.Robot;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
 import java.awt.event.MouseAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.image.BufferedImage;
 import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.JFrame;
 
@@ -103,5 +109,31 @@ public class GameWindow extends JFrame {
         return null; // only possible value for a Void type
       }
     };
+  }
+
+  /**
+   * Captures the current window content as an image
+   * 
+   * @return BufferedImage of the window content or null if capture fails
+   */
+  public BufferedImage captureScreen() {
+    try {
+      Rectangle rect = this.getBounds();
+      BufferedImage image = new Robot().createScreenCapture(rect);
+      return image;
+    } catch (Exception e) {
+      Logger.getLogger(GameWindow.class.getName()).log(Level.WARNING,
+          "Failed to capture screenshot", e);
+      return null;
+    }
+  }
+
+  /**
+   * Sets the window title
+   * 
+   * @param title New window title
+   */
+  public void setTitle(String title) {
+    super.setTitle(title);
   }
 }

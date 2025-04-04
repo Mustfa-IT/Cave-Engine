@@ -12,6 +12,11 @@ public class PhysicsBodyComponent {
   private Body body;
   private final BodyDef bodyDef;
   private final FixtureDef fixtureDef;
+  private Shape shape;
+  private float width;
+  private float height;
+  private boolean isTrigger;
+  private String collisionLayer;
 
   public PhysicsBodyComponent(BodyDef bodyDef, Shape shape, float density, float friction, float restitution) {
     this.bodyDef = bodyDef;
@@ -20,6 +25,11 @@ public class PhysicsBodyComponent {
     this.fixtureDef.density = density;
     this.fixtureDef.friction = friction;
     this.fixtureDef.restitution = restitution;
+    this.shape = shape;
+    this.width = 0;
+    this.height = 0;
+    this.isTrigger = false;
+    this.collisionLayer = "default";
   }
 
   public Body getBody() {
@@ -36,5 +46,37 @@ public class PhysicsBodyComponent {
 
   public FixtureDef getFixtureDef() {
     return fixtureDef;
+  }
+
+  public Shape getShape() {
+    return shape;
+  }
+
+  public void setShape(Shape shape) {
+    this.shape = shape;
+  }
+
+  public float getWidth() {
+    return width;
+  }
+
+  public float getHeight() {
+    return height;
+  }
+
+  public boolean isTrigger() {
+    return isTrigger;
+  }
+
+  public void setTrigger(boolean trigger) {
+    isTrigger = trigger;
+  }
+
+  public String getCollisionLayer() {
+    return collisionLayer;
+  }
+
+  public void setCollisionLayer(String collisionLayer) {
+    this.collisionLayer = collisionLayer;
   }
 }

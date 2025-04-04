@@ -19,7 +19,7 @@ public class TestScene extends Scene {
     // Original scene transition logic
     if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
       startTime = System.currentTimeMillis();
-      super.engine.getSceneManager().popScene();
+      super.engine.getSceneManager().setActiveScene("test2");
     }
   }
 

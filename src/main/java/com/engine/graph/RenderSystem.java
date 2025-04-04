@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import com.engine.components.CameraComponent;
+import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
@@ -28,6 +29,11 @@ public class RenderSystem implements RenderingSystem {
   private final CameraSystem cameraSystem;
   private static final Logger LOGGER = Logger.getLogger(GameEngine.class.getName());
 
+  // Debug visualization flags
+  private boolean debugPhysics = false;
+  private boolean debugColliders = false;
+  private boolean showGrid = true;
+
   @Inject
   public RenderSystem(GameWindow window, Dominion world, CameraSystem cameraSystem) {
     this.cameraSystem = cameraSystem;
@@ -36,6 +42,19 @@ public class RenderSystem implements RenderingSystem {
     // Ensure the window is visible before creating the BufferStrategy
     window.initialize();
     window.createBufferStrategy(2);
+  }
+
+  /**
+   * Configure debug visualization options
+   *
+   * @param showPhysics   Show physics debug info
+   * @param showColliders Show collider outlines
+   * @param showGrid      Show world grid
+   */
+  public void setDebugOptions(boolean showPhysics, boolean showColliders, boolean showGrid) {
+    this.debugPhysics = showPhysics;
+    this.debugColliders = showColliders;
+    this.showGrid = showGrid;
   }
 
   /**
@@ -52,8 +71,10 @@ public class RenderSystem implements RenderingSystem {
     // Clear the screen
     g.clearRect(0, 0, window.getWidth(), window.getHeight());
 
-    // Draw world grid for reference (optional)
-    drawWorldGrid(g);
+    // Only draw grid if flag is enabled
+    if (showGrid) {
+      drawWorldGrid(g);
+    }
 
     // Get the camera-transformed graphics context
     Entity camera = cameraSystem.getActiveCamera();
@@ -71,6 +92,12 @@ public class RenderSystem implements RenderingSystem {
     // Apply camera transformation and render entities
     Graphics2D cameraTranformedG = cameraSystem.applyActiveCamera((Graphics2D) g.create());
     renderEntities(cameraTranformedG);
+
+    // Draw debug visualizations if enabled
+    if (debugPhysics || debugColliders) {
+      renderDebugOverlays(cameraTranformedG);
+    }
+
     cameraTranformedG.dispose();
 
     // Create a separate graphics context for UI (not affected by camera)
@@ -181,5 +208,44 @@ public class RenderSystem implements RenderingSystem {
         entityG.dispose();
       }
     });
+  }
+
+  /**
+   * Render physics and collider debug visualizations
+   */
+  private void renderDebugOverlays(Graphics2D g) {
+    // Physics debug rendering
+    if (debugPhysics) {
+      // Render physics bodies, velocities, etc.
+      // Implementation depends on your physics system
+    }
+
+    // Collider debug rendering
+    if (debugColliders) {
+      // Outline all colliders
+      world.findEntitiesWith(Transform.class, PhysicsBodyComponent.class).forEach(result -> {
+        Transform transform = result.comp1();
+        PhysicsBodyComponent physics = result.comp2();
+
+        // Get a separate graphics context
+        Graphics2D debugG = (Graphics2D) g.create();
+        debugG.setColor(new Color(255, 0, 0, 128));
+        debugG.translate(transform.getX(), transform.getY());
+        debugG.rotate(transform.getRotation());
+
+        // Draw collider outline based on shape
+        if (physics.getBody() != null) {
+          // Simple rectangle representation for debugging
+          if (physics.getShape() != null) {
+            // This can be improved to properly render different shape types
+            float width = physics.getWidth();
+            float height = physics.getHeight();
+            debugG.drawRect((int) (-width / 2), (int) (-height / 2), (int) width, (int) height);
+          }
+        }
+
+        debugG.dispose();
+      });
+    }
   }
 }

@@ -16,6 +16,7 @@ import com.engine.core.GameWindow;
 import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
 import com.engine.graph.RenderingSystem;
+import com.engine.input.InputManager;
 import com.engine.physics.PhysicsSystem;
 import com.engine.physics.PhysicsWorld;
 import com.engine.scene.SceneManager;
@@ -116,12 +117,18 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
+    public InputManager provideInputManager(GameWindow window, CameraSystem cameraSystem) {
+      return new InputManager(window, cameraSystem);
+    }
+
+    @Provides
+    @Singleton
     public GameEngine provideGameEngine(GameWindow window, Dominion ecs, RenderingSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
-        Properties config) {
+        InputManager inputManager, Properties config) {
       return new GameEngine(window, ecs, (RenderSystem) renderer, cameraSystem, (PhysicsWorld) physicsWorld,
-          entityFactory, uiSystem, config);
+          entityFactory, uiSystem, inputManager, config);
     }
   }
 }
