@@ -87,14 +87,14 @@ public class GameEngine implements OverlayRenderer {
   private final AnimationSystem animationSystem;
 
   @Inject
-  public GameEngine(GameFrame gameFrame, Dominion ecs, RenderSystem renderer,
+  public GameEngine(GameFrame gameFrame, GameWindow window, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
       EntityFactory entityFactory, UISystem uiSystem,
       InputManager inputManager, EngineConfig config,
       EventSystem eventSystem, AssetManager assetManager,
       AnimationSystem animationSystem) {
     this.gameFrame = gameFrame;
-    this.window = new GameWindow();
+    this.window = window; // Use the provided window instance
     this.ecs = ecs;
     this.renderer = renderer;
     this.cameraSystem = cameraSystem;
@@ -116,6 +116,14 @@ public class GameEngine implements OverlayRenderer {
 
     // Register game engine events
     setupEventListeners();
+
+    // Set up window close listener to properly shut down the engine
+    window.addWindowListener(new java.awt.event.WindowAdapter() {
+      @Override
+      public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+        stop();
+      }
+    });
 
     addShutdownHook(new Thread(this::stop));
     init();
@@ -314,8 +322,13 @@ public class GameEngine implements OverlayRenderer {
   public GameEngine start() {
     if (engineState == State.RUNNING)
       return this;
+
     engineState = State.RUNNING;
+
+    // Make the window visible now that everything is set up
+    this.window.setVisible(true);
     this.gameFrame.initialize();
+
     this.cameraSystem.updateAllViewports(gameFrame.getWidth(), gameFrame.getHeight());
     this.setDebugDisplay(debugPhysics, debugColliders, this.debugGrid);
     LOGGER.info("Starting the Game Engine with target FPS: " + targetFps);
@@ -326,16 +339,18 @@ public class GameEngine implements OverlayRenderer {
   public void stop() {
     if (closedByWindow)
       return;
+
     engineState = State.STOPPED;
     LOGGER.info("Stopping the Game Engine...");
 
     // Clean up resources
     assetManager.shutdown();
-
     // Notify listeners
     eventSystem.fireEvent(new GameEvent("game:shutdown"));
-
     scheduler.shutDown(); // Stop the scheduler
+
+    // Properly dispose the window
+    window.dispose();
   }
 
   public void addShutdownHook(Thread hook) {

@@ -87,7 +87,24 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public GameFrame provideGameWindow(Properties config) {
+    public GameWindow provideGameWindow(Properties config) {
+      int width = Integer.parseInt(config.getProperty("window.width", "800"));
+      int height = Integer.parseInt(config.getProperty("window.height", "600"));
+      String title = config.getProperty("window.title", "Physics Game");
+
+      // Create the window first
+      GameWindow window = new GameWindow();
+      window.setTitle(title);
+      window.setSize(width, height);
+      window.setLocationRelativeTo(null);
+      window.setDefaultCloseOperation(GameWindow.DISPOSE_ON_CLOSE);
+
+      return window;
+    }
+
+    @Provides
+    @Singleton
+    public GameFrame provideGameFrame(GameWindow window, Properties config) {
       int width = Integer.parseInt(config.getProperty("window.width", "800"));
       int height = Integer.parseInt(config.getProperty("window.height", "600"));
       String title = config.getProperty("window.title", "Physics Game");
@@ -95,14 +112,8 @@ public abstract class EngineModule {
       // Create the frame with dimensions
       GameFrame gameFrame = new GameFrame(title, width, height);
 
-      // Create a window to hold the canvas
-      GameWindow window = new GameWindow();
+      // Add frame to window
       window.add(gameFrame);
-      window.setTitle(title);
-      window.setSize(width, height);
-      window.setLocationRelativeTo(null);
-      window.setDefaultCloseOperation(GameWindow.DISPOSE_ON_CLOSE);
-      window.setVisible(true); // Make the window visible right away
 
       return gameFrame;
     }
@@ -199,13 +210,15 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public GameEngine provideGameEngine(GameFrame gameFrame, Dominion ecs, RenderSystem renderer,
+    public GameEngine provideGameEngine(GameFrame gameFrame, GameWindow window, // Add window parameter
+        Dominion ecs, RenderSystem renderer,
         CameraSystem cameraSystem, PhysicsSystem physicsWorld,
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, EngineConfig config,
         EventSystem eventSystem, AssetManager assetManager,
         AnimationSystem animationSystem) {
-      GameEngine engine = new GameEngine(gameFrame, ecs, renderer, cameraSystem,
+
+      GameEngine engine = new GameEngine(gameFrame, window, ecs, renderer, cameraSystem, // Pass window here
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
           config, eventSystem, assetManager, animationSystem);
 
