@@ -150,7 +150,7 @@ public class EditorPanel extends AbstractEditorElement {
 
   /**
    * Get the list of child elements
-   * 
+   *
    * @return List of child elements
    */
   public List<EditorElement> getChildren() {
@@ -273,6 +273,21 @@ public class EditorPanel extends AbstractEditorElement {
     width = newWidth;
     height = newHeight;
     expandedHeight = newHeight;
+  }
+
+  @Override
+  public void setPosition(int newX, int newY) {
+    // Calculate movement delta
+    int deltaX = newX - x;
+    int deltaY = newY - y;
+
+    // Update this panel's position using parent method
+    super.setPosition(newX, newY);
+
+    // Update all child elements to maintain their relative positions
+    for (EditorElement child : children) {
+      child.setPosition(child.getX() + deltaX, child.getY() + deltaY);
+    }
   }
 
   public boolean isCollapsed() {

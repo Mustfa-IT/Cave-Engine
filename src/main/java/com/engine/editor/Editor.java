@@ -143,7 +143,7 @@ public class Editor {
    */
   private EditorPanel findPanelForResize(int x, int y, List<EditorElement> elements) {
     // Create a copy if this is the main elements list
-    List<EditorElement> elementsCopy =  new ArrayList<>(this.elements);
+    List<EditorElement> elementsCopy =  new ArrayList<>(elements);
 
     // Check from top to bottom (last element drawn is on top)
     for (int i = elementsCopy.size() - 1; i >= 0; i--) {
