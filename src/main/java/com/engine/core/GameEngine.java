@@ -1,6 +1,5 @@
 package com.engine.core;
 
-
 import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
 import com.engine.physics.PhysicsWorld;
@@ -12,6 +11,7 @@ import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;
 
 import java.util.Properties;
+import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -142,6 +142,19 @@ public class GameEngine {
     } catch (Exception e) {
       LOGGER.log(Level.SEVERE, "Error in game update loop", e);
     }
+  }
+
+  /**
+   * Creates and registers a scene with the engine using a supplier
+   * 
+   * @param name          Scene identifier
+   * @param sceneSupplier Supplier that creates the scene
+   * @return this GameEngine instance for method chaining
+   */
+  public GameEngine createScene(String name, Supplier<Scene> sceneSupplier) {
+    Scene scene = sceneSupplier.get();
+    registerScene(name, scene);
+    return this;
   }
 
   /**
