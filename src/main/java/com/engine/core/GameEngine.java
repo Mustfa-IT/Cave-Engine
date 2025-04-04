@@ -24,6 +24,7 @@ import dev.dominion.ecs.api.Entity;
 import dev.dominion.ecs.api.Scheduler;
 
 import java.awt.Graphics2D;
+import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -32,6 +33,8 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
@@ -86,6 +89,12 @@ public class GameEngine implements OverlayRenderer {
   private final AssetManager assetManager;
   private final AnimationSystem animationSystem;
 
+  // List to store additional overlay renderers
+  private final List<Consumer<Graphics2D>> overlayRenderers = new ArrayList<>();
+
+  // Reference to the engine component for DI access
+  private static EngineComponent engineComponent;
+
   @Inject
   public GameEngine(GameFrame gameFrame, GameWindow window, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
@@ -137,10 +146,10 @@ public class GameEngine implements OverlayRenderer {
         cameraSystem.updateAllViewports(width, height);
       });
 
-      // Don't need these lines anymore as they're handled in the EngineModule
-      // window.add(gameFrame);
-      // window.setLocationRelativeTo(null);
-      // window.setDefaultCloseOperation(GameWindow.DISPOSE_ON_CLOSE);
+      // Register editor with input manager
+      if (engineComponent != null && engineComponent.editor() != null) {
+        engineComponent.editor().registerInputHandlers(inputManager);
+      }
 
       // Create camera at world origin (0,0)
       this.cameraSystem.createCamera(gameFrame.getWidth(), gameFrame.getHeight(), 0, 0);
@@ -682,6 +691,22 @@ public class GameEngine implements OverlayRenderer {
     if (console != null && console.isVisible()) {
       console.render(g, gameFrame.getWidth());
     }
+
+    // Render all additional overlay renderers
+    for (var renderer : overlayRenderers) {
+      renderer.accept(g);
+    }
+  }
+
+  /**
+   * Adds an additional overlay renderer
+   *
+   * @param renderer The renderer function that takes a Graphics2D object
+   * @return this GameEngine instance for method chaining
+   */
+  public GameEngine addOverlayRenderer(Consumer<Graphics2D> renderer) {
+    overlayRenderers.add(renderer);
+    return this;
   }
 
   public boolean isDebugPhysics() {
@@ -723,11 +748,51 @@ public class GameEngine implements OverlayRenderer {
     return animationSystem;
   }
 
+  /**
+   * Get access to the Dagger injector
+   *
+   * @return The EngineComponent injector
+   */
+  public EngineComponent getInjector() {
+    return engineComponent;
+  }
+
+  /**
+   * Add a keyboard listener for editor property editing
+   *
+   * @param handler The handler for keyboard events
+   */
+  public void addEditorKeyListener(Consumer<KeyEvent> handler) {
+    inputManager.addKeyTypedListener(e -> {
+      if (engineComponent.editor().isActive()) {
+        handler.accept(e);
+        return true;
+      }
+      return false;
+    });
+  }
+
   public static GameEngine createEngine() {
-    EngineComponent engineComponent = DaggerEngineComponent.builder()
+    engineComponent = DaggerEngineComponent.builder()
         .concreteModule(new EngineModule.ConcreteModule())
         .build();
-    return engineComponent.engine();
+
+    GameEngine engine = engineComponent.engine();
+
+    // Register editor with input manager after creation
+    if (engineComponent.editor() != null) {
+      engineComponent.editor().registerInputHandlers(engine.getInputManager());
+    }
+
+    return engine;
+  }
+
+  public void scheduleTask(Runnable r) {
+    scheduler.schedule(r);
+  }
+
+  public double getDeltaTime() {
+    return this.scheduler.deltaTime();
   }
 
 }

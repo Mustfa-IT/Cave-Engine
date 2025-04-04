@@ -37,14 +37,15 @@ public class InputManager {
   private final Map<Integer, Boolean> mouseButtonStates = new HashMap<>();
 
   // Input event callbacks
-  private final Map<Integer, Consumer<KeyEvent>> keyPressCallbacks = new HashMap<>();
-  private final Map<Integer, Consumer<KeyEvent>> keyReleaseCallbacks = new HashMap<>();
-  private final Map<Integer, Consumer<MouseEvent>> mouseButtonCallbacks = new HashMap<>();
+  private final Map<Integer, Function<KeyEvent, Boolean>> keyPressCallbacks = new HashMap<>();
+  private final Map<Integer, Function<KeyEvent, Boolean>> keyReleaseCallbacks = new HashMap<>();
+  private final Map<Integer, Function<MouseEvent, Boolean>> mouseButtonCallbacks = new HashMap<>();
   private Consumer<Point> mouseMoveCallback = null;
 
   // Custom key handlers
   private final List<Function<KeyEvent, Boolean>> keyListeners = new ArrayList<>();
   private final List<Function<KeyEvent, Boolean>> keyTypedListeners = new ArrayList<>();
+  private final List<Function<MouseEvent, Boolean>> mouseListeners = new ArrayList<>();
 
   public InputManager(GameFrame window, CameraSystem cameraSystem) {
     this.window = window;
@@ -70,7 +71,11 @@ public class InputManager {
 
         // Handle any registered callbacks
         if (keyPressCallbacks.containsKey(keyCode)) {
-          keyPressCallbacks.get(keyCode).accept(e);
+          Function<KeyEvent, Boolean> callback = keyPressCallbacks.get(keyCode);
+          if (callback.apply(e)) {
+            // Event was consumed, stop processing
+            return;
+          }
         }
       }
 
@@ -92,7 +97,8 @@ public class InputManager {
 
         // Handle any registered callbacks
         if (keyReleaseCallbacks.containsKey(keyCode)) {
-          keyReleaseCallbacks.get(keyCode).accept(e);
+          Function<KeyEvent, Boolean> callback = keyReleaseCallbacks.get(keyCode);
+          callback.apply(e);
         }
       }
     };
@@ -112,6 +118,10 @@ public class InputManager {
       public void mouseDragged(MouseEvent e) {
         mouseScreenPosition.setLocation(e.getX(), e.getY());
 
+        if (processMouseEvent(e, mouseListeners)) {
+          return;
+        }
+
         if (mouseMoveCallback != null) {
           mouseMoveCallback.accept(mouseScreenPosition);
         }
@@ -122,18 +132,35 @@ public class InputManager {
     MouseAdapter mouseAdapter = new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {
+        // Process through registered mouse listeners first
+        if (processMouseEvent(e, mouseListeners)) {
+          return;
+        }
+
         int button = e.getButton();
         mouseButtonStates.put(button, true);
 
         if (mouseButtonCallbacks.containsKey(button)) {
-          mouseButtonCallbacks.get(button).accept(e);
+          Function<MouseEvent, Boolean> callback = mouseButtonCallbacks.get(button);
+          callback.apply(e);
         }
       }
 
       @Override
       public void mouseReleased(MouseEvent e) {
+        // Process through registered mouse listeners first
+        if (processMouseEvent(e, mouseListeners)) {
+          return;
+        }
+
         int button = e.getButton();
         mouseButtonStates.put(button, false);
+      }
+
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        // Handle mouse clicks separately since they occur after press/release
+        processMouseEvent(e, mouseListeners);
       }
     };
 
@@ -150,6 +177,18 @@ public class InputManager {
    */
   private boolean processKeyEvent(KeyEvent e, List<Function<KeyEvent, Boolean>> listeners) {
     for (Function<KeyEvent, Boolean> listener : listeners) {
+      if (listener.apply(e)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Process mouse events through listeners, return true if consumed
+   */
+  private boolean processMouseEvent(MouseEvent e, List<Function<MouseEvent, Boolean>> listeners) {
+    for (Function<MouseEvent, Boolean> listener : listeners) {
       if (listener.apply(e)) {
         return true;
       }
@@ -202,7 +241,7 @@ public class InputManager {
    * @param callback Consumer to handle the key event
    * @return this InputManager for method chaining
    */
-  public InputManager onKeyPress(int keyCode, Consumer<KeyEvent> callback) {
+  public InputManager onKeyPress(int keyCode, Function<KeyEvent, Boolean> callback) {
     keyPressCallbacks.put(keyCode, callback);
     return this;
   }
@@ -214,7 +253,7 @@ public class InputManager {
    * @param callback Consumer to handle the key event
    * @return this InputManager for method chaining
    */
-  public InputManager onKeyRelease(int keyCode, Consumer<KeyEvent> callback) {
+  public InputManager onKeyRelease(int keyCode, Function<KeyEvent, Boolean> callback) {
     keyReleaseCallbacks.put(keyCode, callback);
     return this;
   }
@@ -223,10 +262,10 @@ public class InputManager {
    * Register a callback for when a mouse button is pressed
    *
    * @param button   MouseEvent button code to listen for
-   * @param callback Consumer to handle the mouse event
+   * @param callback Function to handle the mouse event, returns true if consumed
    * @return this InputManager for method chaining
    */
-  public InputManager onMousePress(int button, Consumer<MouseEvent> callback) {
+  public InputManager onMousePress(int button, Function<MouseEvent, Boolean> callback) {
     mouseButtonCallbacks.put(button, callback);
     return this;
   }
@@ -272,5 +311,30 @@ public class InputManager {
     if (listener != null) {
       keyTypedListeners.add(listener);
     }
+  }
+
+  /**
+   * Add a general mouse event listener with specific priority (higher priority
+   * listeners get called first)
+   *
+   * @param listener The listener that returns true if it consumed the event
+   * @param priority Higher numbers mean higher priority
+   */
+  public void addMouseListener(Function<MouseEvent, Boolean> listener, int priority) {
+    if (listener != null) {
+      // Insert based on priority - prepend for higher priority
+      if (priority > 0 && !mouseListeners.isEmpty()) {
+        mouseListeners.add(0, listener);
+      } else {
+        mouseListeners.add(listener);
+      }
+    }
+  }
+
+  /**
+   * Add a mouse listener with normal priority
+   */
+  public void addMouseListener(Function<MouseEvent, Boolean> listener) {
+    addMouseListener(listener, 0);
   }
 }

@@ -14,6 +14,7 @@ import com.engine.scene.SimpleScene;
 import com.engine.ui.Button;
 import com.engine.events.GameEvent;
 import com.engine.events.EventTypes;
+import com.engine.editor.EditorExample;
 
 import dev.dominion.ecs.api.Entity;
 
@@ -48,6 +49,9 @@ public class Main {
 
     // Set up event listeners
     setupEventListeners(game);
+
+    // Set up the editor system
+    setupEditorSystem(game);
   }
 
   /**
@@ -111,62 +115,70 @@ public class Main {
     var entityFactory = game.getEntityFactory();
 
     // Setup pause toggle with P key
-    inputManager.onKeyPress(KeyEvent.VK_P, e -> game.togglePause());
+    inputManager.onKeyPress(KeyEvent.VK_P, e -> {
+      game.togglePause();
+      return true; // Consume the event
+    });
 
     // Debug visualization toggle with D key
     inputManager.onKeyPress(KeyEvent.VK_D, e -> {
       boolean currentDebugState = game.isDebugColliders();
       game.setDebugDisplay(!currentDebugState, !currentDebugState, game.isDebugGrid());
+      return true; // Consume the event
     });
 
     // Scene switching
-    inputManager.onKeyPress(KeyEvent.VK_1, e -> game.setActiveScene("test"));
+    inputManager.onKeyPress(KeyEvent.VK_1, e -> {
+      game.setActiveScene("test");
+      return true; // Consume the event
+    });
 
     // Debug overlay toggle with F3
-    inputManager.onKeyPress(KeyEvent.VK_F3, e -> game.toggleDebugOverlay());
+    inputManager.onKeyPress(KeyEvent.VK_F3, e -> {
+      game.toggleDebugOverlay();
+      return true; // Consume the event
+    });
 
     // Console toggle with backquote/tilde
-    inputManager.onKeyPress(KeyEvent.VK_BACK_QUOTE, e -> game.toggleConsole());
+    inputManager.onKeyPress(KeyEvent.VK_BACK_QUOTE, e -> {
+      game.toggleConsole();
+      return true; // Consume the event
+    });
 
     // Screenshot with F12
-    inputManager.onKeyPress(KeyEvent.VK_F12,
-        e -> game.takeScreenshot("screenshot_" + System.currentTimeMillis() + ".png"));
+    inputManager.onKeyPress(KeyEvent.VK_F12, e -> {
+      game.takeScreenshot("screenshot_" + System.currentTimeMillis() + ".png");
+      return true; // Consume the event
+    });
 
-    // // Create custom GameObject on click at world position
-    // inputManager.onMousePress(1, e -> {
-    // float[] worldPos = inputManager.getMouseWorldPosition();
-    // System.out.println("Mouse clicked at world position: " + worldPos[0] + ", " +
-    // worldPos[1]);
-
-    // // Create a custom GameObject at click position
-    // entityFactory.createGameObject(worldPos[0], worldPos[1], new
-    // RotatingSquare(50, Color.YELLOW));
-    // });
-
-    // Create physics GameObject with right click (using new component-based
-    // approach)
+    // Create physics GameObject with right click
     inputManager.onMousePress(3, e -> {
-      float[] worldPos = inputManager.getMouseWorldPosition();
+      // Only process if editor is not active
+      if (game.getInjector().editor().isActive()) {
+        return false; // Let editor handle it
+      }
 
-      // Create a physics-enabled GameObject with the new approach
+      float[] worldPos = inputManager.getMouseWorldPosition();
       PhysicsParameters circlePhysics = PhysicsParameters.circle(
           30, BodyType.DYNAMIC, 1.0f, 0.3f, 0.5f);
-
       entityFactory.createGameObject(
           worldPos[0], worldPos[1],
           new BouncingObject(),
           circlePhysics);
+      return true; // Consume the event
     });
 
     // Create box physics GameObject with middle click
     inputManager.onMousePress(2, e -> {
+      // Only process if editor is not active
+      if (game.getInjector().editor().isActive()) {
+        return false; // Let editor handle it
+      }
+
       float[] worldPos = inputManager.getMouseWorldPosition();
-
-      // Create non-physics GameObject first
       Entity entity = entityFactory.createGameObject(worldPos[0], worldPos[1], new ColorChangingBox());
-
-      // Then add physics to it
       entityFactory.addBoxPhysics(entity, 40, 40, BodyType.DYNAMIC, 0.5f, 0.3f, 0.8f);
+      return true; // Consume the event
     });
   }
 
@@ -177,7 +189,7 @@ public class Main {
     var uiSystem = game.getUiSystem();
 
     // Create gravity slider
-    Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, 0, 20, 9.8f);
+    Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, -20, 20, 9.8f);
     var button = uiSystem.createButton("Click Me", 40, 80, 50, 20);
     var b = (Button) button.get(UIComponent.class).getUi();
     b.addClickListener((e) -> {
@@ -294,6 +306,13 @@ public class Main {
       System.out.println("ColorChangingBox destroyed!");
     }
 
+  }
+
+  /**
+   * Sets up the editor system
+   */
+  private static void setupEditorSystem(GameEngine game) {
+    EditorExample.integrateWithGame(game);
   }
 
 }

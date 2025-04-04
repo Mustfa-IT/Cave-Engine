@@ -28,13 +28,14 @@ import com.engine.ui.UISystem;
 import com.engine.assets.AssetManager;
 import com.engine.events.EventSystem;
 import com.engine.animation.AnimationSystem;
+import com.engine.editor.EditorModule;
 
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
 import dev.dominion.ecs.api.Dominion;
 
-@Module
+@Module(includes = { EditorModule.class })
 public abstract class EngineModule {
   private static final Logger LOGGER = Logger.getLogger(EngineModule.class.getName());
 
