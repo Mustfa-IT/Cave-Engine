@@ -16,6 +16,8 @@ public class SpriteAnimationComponent {
   private boolean finished = false;
   private Runnable onFinishCallback;
   private float playbackSpeed = 1.0f;
+  private boolean onLastFrame;
+
 
   /**
    * Create a new animation component
@@ -190,5 +192,12 @@ public class SpriteAnimationComponent {
 
   public int getCurrentFrameIndex() {
     return currentFrameIndex;
+  }
+  public boolean isOnLastFrame(){
+    return this.onLastFrame;
+  }
+
+  public boolean isComplete() {
+    return finished;
   }
 }

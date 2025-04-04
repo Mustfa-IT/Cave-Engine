@@ -6,14 +6,18 @@ import java.awt.Color;
 import java.io.File;
 
 import com.engine.core.GameEngine;
+import com.engine.components.UIComponent;
 import com.engine.core.AbstractGameObject;
 import com.engine.gameobject.GameObject;
 import com.engine.entity.EntityFactory.PhysicsParameters;
 import com.engine.scene.SimpleScene;
+import com.engine.ui.Button;
 import com.engine.events.GameEvent;
+import com.engine.events.EventTypes;
 
 import dev.dominion.ecs.api.Entity;
 
+import org.jbox2d.common.Vec2;
 import org.jbox2d.dynamics.BodyType;
 
 public class Main {
@@ -53,21 +57,45 @@ public class Main {
     var eventSystem = game.getEventSystem();
 
     // Listen for scene changes
-    eventSystem.addEventListener("scene:change", event -> {
+    eventSystem.addEventListener(EventTypes.SCENE_CHANGE, event -> {
       System.out.println("Scene changed to: " + event.getData("name", "unknown"));
     });
 
     // Listen for game paused/resumed
-    eventSystem.addEventListener("game:pause", event -> {
+    eventSystem.addEventListener(EventTypes.GAME_PAUSE, event -> {
       System.out.println("Main Game paused");
     });
 
-    eventSystem.addEventListener("game:resume", event -> {
+    eventSystem.addEventListener(EventTypes.GAME_RESUME, event -> {
       System.out.println("Main Game resumed");
     });
 
+    // // Demonstrate wildcard listeners for physics events
+    // eventSystem.addPatternListener("physics:*", event -> {
+    // System.out.println("Physics event detected: " + event.getType());
+    // });
+
+    // // Listen for all collision events
+    // eventSystem.addPatternListener("collision:*", event -> {
+    // Entity entityA = event.getData("entityA", null);
+    // Entity entityB = event.getData("entityB", null);
+    // if (entityA != null && entityB != null) {
+    // System.out.println("Collision " +
+    // (event.getType().equals(EventTypes.COLLISION_BEGIN) ? "started" : "ended") +
+    // " between entities: " + entityA + " and " + entityB);
+    // }
+    // });
+
+    // Listen for gravity changes
+    eventSystem.addEventListener(EventTypes.PHYSICS_GRAVITY_CHANGED, event -> {
+      Vec2 gravity = event.getData("gravity", null);
+      if (gravity != null) {
+        System.out.println("Gravity changed to: " + gravity.x + ", " + gravity.y);
+      }
+    });
+
     // Fire an event when the game starts
-    eventSystem.fireEvent(new GameEvent("game:start")
+    eventSystem.fireEvent(new GameEvent(EventTypes.GAME_START)
         .addData("time", System.currentTimeMillis())
         .addData("version", "1.0"));
   }
@@ -149,12 +177,17 @@ public class Main {
     var uiSystem = game.getUiSystem();
 
     // Create gravity slider
-    dev.dominion.ecs.api.Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, 0, 20, 9.8f);
-
+    Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, 0, 20, 9.8f);
+    var button = uiSystem.createButton("Click Me", 40, 80, 50, 20);
+    var b = (Button) button.get(UIComponent.class).getUi();
+    b.addClickListener((e) -> {
+      System.out.println("Button Clicked");
+    });
     // Set callback for when value changes
     uiSystem.setSliderCallback(gravitySlider, (value) -> {
       game.getPhysicsWorld().setGravity(new org.jbox2d.common.Vec2(0, -value));
     });
+
   }
 
   /**

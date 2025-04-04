@@ -7,8 +7,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 import javax.inject.Singleton;
+
+import com.engine.core.EngineConfig;
 
 /**
  * A central event system that allows components to communicate
@@ -19,8 +22,16 @@ public class EventSystem {
   private static final Logger LOGGER = Logger.getLogger(EventSystem.class.getName());
 
   private final Map<String, List<GameEventListener>> listeners = new ConcurrentHashMap<>();
+  private final Map<Pattern, List<GameEventListener>> patternListeners = new ConcurrentHashMap<>();
   private final List<GameEvent> eventQueue = new ArrayList<>();
   private final Map<String, Object> globalState = new HashMap<>();
+  private EngineConfig config;
+  private boolean debugMode = false;
+
+  public EventSystem(EngineConfig config){
+    this.config = config;
+    this.debugMode = config.debugEvents();
+  }
 
   /**
    * Register a listener for a specific event type
@@ -31,6 +42,24 @@ public class EventSystem {
   public void addEventListener(String eventType, GameEventListener listener) {
     listeners.computeIfAbsent(eventType, k -> new ArrayList<>()).add(listener);
     LOGGER.fine("Added listener for event type: " + eventType);
+  }
+
+  /**
+   * Register a listener using a pattern with wildcard support
+   * For example: "physics:*", "*.changed", "ui:button:*:click"
+   *
+   * @param pattern  The event pattern with wildcards
+   * @param listener The listener to be called when matching events are fired
+   */
+  public void addPatternListener(String pattern, GameEventListener listener) {
+    // Convert wildcard pattern to regex pattern
+    String regex = pattern
+        .replace(".", "\\.")
+        .replace("*", ".*");
+    Pattern compiledPattern = Pattern.compile(regex);
+
+    patternListeners.computeIfAbsent(compiledPattern, k -> new ArrayList<>()).add(listener);
+    LOGGER.fine("Added pattern listener for: " + pattern);
   }
 
   /**
@@ -47,11 +76,29 @@ public class EventSystem {
   }
 
   /**
+   * Remove all listeners for a specific event type
+   *
+   * @param eventType The event type to remove listeners for
+   */
+  public void removeAllListeners(String eventType) {
+    if (listeners.containsKey(eventType)) {
+      int count = listeners.get(eventType).size();
+      listeners.remove(eventType);
+      LOGGER.fine("Removed " + count + " listeners for event type: " + eventType);
+    }
+  }
+
+  /**
    * Fire an event immediately
    *
    * @param event The event to fire
    */
   public void fireEvent(GameEvent event) {
+    if (debugMode) {
+      LOGGER.info("Event fired: " + event.toString());
+    }
+
+    // Process exact type matches
     if (listeners.containsKey(event.getType())) {
       for (GameEventListener listener : listeners.get(event.getType())) {
         try {
@@ -61,6 +108,40 @@ public class EventSystem {
         }
       }
     }
+
+    // Process pattern matches
+    for (Map.Entry<Pattern, List<GameEventListener>> entry : patternListeners.entrySet()) {
+      if (entry.getKey().matcher(event.getType()).matches()) {
+        for (GameEventListener listener : entry.getValue()) {
+          try {
+            listener.onEvent(event);
+          } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "Error in pattern event listener", e);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Fire an event with type and optional data
+   *
+   * @param eventType The event type
+   * @param data      Optional data key-value pairs
+   */
+  public void fireEvent(String eventType, Object... data) {
+    GameEvent event = new GameEvent(eventType);
+
+    // Process data pairs (key, value)
+    if (data != null && data.length >= 2) {
+      for (int i = 0; i < data.length - 1; i += 2) {
+        if (data[i] instanceof String) {
+          event.addData((String) data[i], data[i + 1]);
+        }
+      }
+    }
+
+    fireEvent(event);
   }
 
   /**
@@ -91,6 +172,16 @@ public class EventSystem {
     for (GameEvent event : currentEvents) {
       fireEvent(event);
     }
+  }
+
+  /**
+   * Enable or disable debug logging for events
+   *
+   * @param debug Whether to enable debug mode
+   */
+  public void setDebugMode(boolean debug) {
+    this.debugMode = debug;
+    LOGGER.info("Event system debug mode: " + (debug ? "enabled" : "disabled"));
   }
 
   /**

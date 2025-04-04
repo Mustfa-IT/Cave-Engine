@@ -3,12 +3,17 @@ package com.engine.ui;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.logging.Logger;
+
+import javax.inject.Inject;
+
 import java.util.function.Consumer;
 
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
 import com.engine.core.GameWindow;
 import com.engine.entity.EntityRegistrar;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -28,7 +33,7 @@ import dev.dominion.ecs.api.Entity;
  * <p>
  * Usage example:
  * </p>
- * 
+ *
  * <pre>
  * UISystem uiSystem = new UISystem(gameWindow, ecsInstance);
  * Entity button = uiSystem.createButton("Click Me", 100, 100, 200, 50);
@@ -38,14 +43,17 @@ public class UISystem {
   private static final Logger LOGGER = Logger.getLogger(UISystem.class.getName());
   private final GameWindow window;
   private final Dominion ecs;
+  private final EventSystem eventSystem;
   private EntityRegistrar currentRegistrar;
   private UIElement hoveredElement;
   private UIElement focusedElement;
   private UIElement draggedElement;
 
-  public UISystem(GameWindow window, Dominion ecs) {
+  @Inject
+  public UISystem(GameWindow window, Dominion ecs, EventSystem eventSystem) {
     this.window = window;
     this.ecs = ecs;
+    this.eventSystem = eventSystem;
     setupEventHandling();
   }
 
@@ -178,8 +186,43 @@ public class UISystem {
 
     UIComponent uiComp = sliderEntity.get(UIComponent.class);
     if (uiComp != null && uiComp.getUi() instanceof Slider) {
-      ((Slider) uiComp.getUi()).setOnValueChanged(callback);
+      Slider slider = (Slider) uiComp.getUi();
+
+      // Wrap the callback to also fire an event
+      slider.setOnValueChanged(value -> {
+        // Fire value changed event
+        eventSystem.fireEvent(EventTypes.UI_VALUE_CHANGED,
+            "element", slider,
+            "entity", sliderEntity,
+            "value", value);
+
+        // Call the original callback
+        callback.accept(value);
+      });
     }
+  }
+
+  @SuppressWarnings("null")
+  public void removeSliderCallBacks(Entity sliderEntity) {
+    if (sliderEntity == null)
+      return;
+    UIComponent uiComp = sliderEntity.get(UIComponent.class);
+    if (uiComp != null)
+      throw new NullPointerException("UIComponent for the Slider can't be found ");
+
+    Slider slider = (Slider) uiComp.getUi();
+    slider.removeSliderCallBacks();
+  }
+
+  @SuppressWarnings("null")
+  public void removeSliderCallBack(Entity sliderEntity, Consumer<Float> callBack) {
+    if (sliderEntity == null)
+      return;
+    UIComponent uiComp = sliderEntity.get(UIComponent.class);
+    if (uiComp != null)
+      throw new NullPointerException("UIComponent for the Slider can't be found ");
+    Slider slider = (Slider) uiComp.getUi();
+    slider.removeSliderCallBack(callBack);
   }
 
   /**
@@ -233,6 +276,12 @@ public class UISystem {
     // Reset previous hover state
     if (hoveredElement instanceof Button) {
       ((Button) hoveredElement).setHovered(false);
+
+      // Fire hover end event
+      eventSystem.fireEvent(EventTypes.UI_HOVER_END,
+          "element", hoveredElement,
+          "x", x,
+          "y", y);
     }
 
     // Find element under cursor
@@ -241,6 +290,12 @@ public class UISystem {
     // Update hover state
     if (hoveredElement instanceof Button) {
       ((Button) hoveredElement).setHovered(true);
+
+      // Fire hover begin event
+      eventSystem.fireEvent(EventTypes.UI_HOVER_BEGIN,
+          "element", hoveredElement,
+          "x", x,
+          "y", y);
     }
   }
 
@@ -252,6 +307,12 @@ public class UISystem {
 
     if (clickedElement instanceof Button) {
       ((Button) clickedElement).click();
+
+      // Fire click event
+      eventSystem.fireEvent(EventTypes.UI_CLICK,
+          "element", clickedElement,
+          "x", x,
+          "y", y);
     }
 
     focusedElement = clickedElement;

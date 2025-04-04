@@ -16,6 +16,8 @@ import org.jbox2d.dynamics.Body;
 import org.jbox2d.dynamics.contacts.Contact;
 
 import com.engine.components.GameObjectComponent;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
 import com.engine.gameobject.GameObject;
 
 import dev.dominion.ecs.api.Dominion;
@@ -29,11 +31,13 @@ public class CollisionSystem implements ContactListener {
   private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 
   private final Dominion ecs;
+  private final EventSystem eventSystem;
   private final Map<String, List<Collision>> activeCollisions = new HashMap<>();
 
   @Inject
-  public CollisionSystem(Dominion ecs) {
+  public CollisionSystem(Dominion ecs, EventSystem eventSystem) {
     this.ecs = ecs;
+    this.eventSystem = eventSystem;
     LOGGER.info("Collision system initialized");
   }
 
@@ -48,6 +52,12 @@ public class CollisionSystem implements ContactListener {
       // Store this as an active collision
       storeCollision(collision);
 
+      // Fire collision begin event
+      eventSystem.fireEvent(EventTypes.COLLISION_BEGIN,
+          "entityA", entityA,
+          "entityB", entityB,
+          "collision", collision);
+
       // Notify collision listeners
       notifyCollisionEnter(entityA, collision);
       notifyCollisionEnter(entityB, collision);
@@ -61,6 +71,12 @@ public class CollisionSystem implements ContactListener {
 
     if (entityA != null && entityB != null) {
       Collision collision = new Collision(entityA, entityB, contact);
+
+      // Fire collision end event
+      eventSystem.fireEvent(EventTypes.COLLISION_END,
+          "entityA", entityA,
+          "entityB", entityB,
+          "collision", collision);
 
       // Remove from active collisions
       removeCollision(collision);

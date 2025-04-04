@@ -5,6 +5,8 @@ import java.awt.Graphics2D;
 import java.awt.BasicStroke;
 import java.awt.Font;
 import java.awt.FontMetrics;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
@@ -16,7 +18,7 @@ public class Slider extends AbstractUIElement {
   private float knobSize = 10;
   private boolean dragging = false;
   private String label;
-  private Consumer<Float> onValueChanged;
+  private List<Consumer<Float>> onValueChanged = new ArrayList<>();
   private Color trackColor = new Color(200, 200, 200);
   private Color knobColor = new Color(100, 100, 240);
   private Color labelColor = new Color(50, 50, 50);
@@ -87,15 +89,24 @@ public class Slider extends AbstractUIElement {
     this.value = clamp(newValue, minValue, maxValue);
 
     if (oldValue != this.value && onValueChanged != null) {
-      onValueChanged.accept(this.value);
+      for (Consumer<Float> consumer : onValueChanged) {
+        consumer.accept(this.value);
+      }
     }
   }
 
   public void setOnValueChanged(Consumer<Float> callback) {
-    this.onValueChanged = callback;
+    this.onValueChanged.add(callback);
   }
 
   private float clamp(float value, float min, float max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  public void removeSliderCallBacks() {
+    this.onValueChanged.clear();
+  }
+  public void removeSliderCallBack(Consumer<Float> callback){
+    this.onValueChanged.remove(callback);
   }
 }

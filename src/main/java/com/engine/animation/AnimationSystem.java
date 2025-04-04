@@ -2,7 +2,11 @@ package com.engine.animation;
 
 import com.engine.components.SpriteComponent;
 import com.engine.components.SpriteAnimationComponent;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
+
 import dev.dominion.ecs.api.Dominion;
+import dev.dominion.ecs.api.Entity;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -15,10 +19,12 @@ import java.util.logging.Logger;
 public class AnimationSystem {
   private static final Logger LOGGER = Logger.getLogger(AnimationSystem.class.getName());
   private final Dominion ecs;
+  private final EventSystem eventSystem;
 
   @Inject
-  public AnimationSystem(Dominion ecs) {
+  public AnimationSystem(Dominion ecs, EventSystem eventSystem) {
     this.ecs = ecs;
+    this.eventSystem = eventSystem;
     LOGGER.info("Animation system initialized");
   }
 
@@ -33,6 +39,7 @@ public class AnimationSystem {
     var entities = ecs.findEntitiesWith(SpriteComponent.class, SpriteAnimationComponent.class);
 
     for (var result : entities) {
+      Entity entity = result.entity();
       SpriteComponent sprite = result.comp1();
       SpriteAnimationComponent animation = result.comp2();
 
@@ -41,8 +48,27 @@ public class AnimationSystem {
         continue;
       }
 
+      // Check if animation frame changed
+      int previousFrame = animation.getCurrentFrameIndex();
+
       // Update animation state
       animation.update(deltaTime);
+
+      // Fire event if frame changed
+      if (previousFrame != animation.getCurrentFrameIndex()) {
+        eventSystem.fireEvent(EventTypes.ANIMATION_FRAME_CHANGED,
+            "entity", entity,
+            "animationName", animation.getCurrentAnimationName(),
+            "frame", animation.getCurrentFrameIndex(),
+            "isLastFrame", animation.isOnLastFrame());
+
+        // Fire completion event if animation finished
+        if (animation.isOnLastFrame() && animation.isComplete()) {
+          eventSystem.fireEvent(EventTypes.ANIMATION_COMPLETE,
+              "entity", entity,
+              "animationName", animation.getCurrentAnimationName());
+        }
+      }
 
       // Apply current animation frame to sprite
       var frame = animation.getCurrentFrame();
@@ -66,13 +92,22 @@ public class AnimationSystem {
    * @return true if successful, false if entity doesn't have required components
    *         or animation not found
    */
-  public boolean playAnimation(dev.dominion.ecs.api.Entity entity, String animationName) {
+  public boolean playAnimation(Entity entity, String animationName) {
     if (entity == null || !entity.has(SpriteAnimationComponent.class)) {
       return false;
     }
 
     SpriteAnimationComponent animComp = entity.get(SpriteAnimationComponent.class);
-    return animComp.play(animationName);
+    boolean result = animComp.play(animationName);
+
+    if (result) {
+      // Fire animation start event
+      eventSystem.fireEvent(EventTypes.ANIMATION_START,
+          "entity", entity,
+          "animationName", animationName);
+    }
+
+    return result;
   }
 
   /**
@@ -84,7 +119,7 @@ public class AnimationSystem {
    * @return true if successful, false if entity doesn't have required components
    *         or animation not found
    */
-  public boolean playAnimation(dev.dominion.ecs.api.Entity entity, String animationName, Runnable onFinish) {
+  public boolean playAnimation(Entity entity, String animationName, Runnable onFinish) {
     if (entity == null || !entity.has(SpriteAnimationComponent.class)) {
       return false;
     }

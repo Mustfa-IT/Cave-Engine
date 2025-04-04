@@ -6,6 +6,7 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.jbox2d.common.Vec2;
@@ -106,8 +107,8 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public UISystem provideUISystem(GameWindow window, Dominion ecs) {
-      return new UISystem(window, ecs);
+    public UISystem provideUISystem(GameWindow window, Dominion ecs, EventSystem evnetSystem) {
+      return new UISystem(window, ecs, evnetSystem);
     }
 
     @Provides
@@ -130,8 +131,8 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public EventSystem provideEventSystem() {
-      return new EventSystem();
+    public EventSystem provideEventSystem(EngineConfig config) {
+      return new EventSystem(config);
     }
 
     @Provides
@@ -142,8 +143,8 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public AnimationSystem provideAnimationSystem(Dominion ecs) {
-      return new AnimationSystem(ecs);
+    public AnimationSystem provideAnimationSystem(Dominion ecs, EventSystem eventSystem) {
+      return new AnimationSystem(ecs, eventSystem);
     }
 
     @Provides
@@ -168,6 +169,8 @@ public abstract class EngineModule {
           Boolean.parseBoolean(config.getProperty("physics.debug", "false")),
           Boolean.parseBoolean(config.getProperty("collision.debug", "false")),
           Boolean.parseBoolean(config.getProperty("render.debug", "false")));
+      engineConfig
+          .setDebugEvents(Boolean.parseBoolean(config.getProperty("event.debug", "false")));
 
       engineConfig.targetFps(
           Integer.parseInt(config.getProperty("engine.targetFps", "60")));

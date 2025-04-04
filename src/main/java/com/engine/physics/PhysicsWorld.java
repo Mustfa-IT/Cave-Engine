@@ -12,6 +12,9 @@ import org.jbox2d.dynamics.BodyType;
 import com.engine.components.PhysicsBodyComponent;
 import com.engine.components.Transform;
 import com.engine.core.EngineConfig;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
+import com.engine.events.GameEvent;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Results.With2;
@@ -31,13 +34,17 @@ public class PhysicsWorld extends World implements PhysicsSystem {
   private float accumulator = 0.0f;
   private final float timeStep;
 
+  // Event system for physics events
+  private final EventSystem eventSystem;
+
   @Inject
-  public PhysicsWorld(Dominion ecs, CollisionSystem collisionSystem, EngineConfig config) {
+  public PhysicsWorld(Dominion ecs, CollisionSystem collisionSystem, EngineConfig config, EventSystem eventSystem) {
     super(config.getGravity());
     this.ecs = ecs;
     this.velocityIterations = config.getVelocityIterations();
     this.positionIterations = config.getPositionIterations();
     this.timeStep = config.getPhysicsTimeStep();
+    this.eventSystem = eventSystem;
 
     // Enable auto-sleeping for bodies that haven't moved
     this.setAllowSleep(config.isEnableBodySleeping());
@@ -150,6 +157,10 @@ public class PhysicsWorld extends World implements PhysicsSystem {
 
     // Perform multiple sub-steps if needed
     while (accumulator >= timeStep) {
+      // Fire pre-step event
+      eventSystem.fireEvent(EventTypes.PHYSICS_STEP, "deltaTime", timeStep);
+
+      // Execute physics step
       this.step(timeStep, velocityIterations, positionIterations);
       accumulator -= timeStep;
     }
@@ -321,5 +332,40 @@ public class PhysicsWorld extends World implements PhysicsSystem {
 
     body.createFixture(fixtureDef);
     return body;
+  }
+
+  @Override
+  public Body createBody(BodyDef def) {
+    Body body = super.createBody(def);
+
+    // Fire body creation event
+    eventSystem.fireEvent(EventTypes.PHYSICS_BODY_CREATED,
+        "body", body,
+        "position", body.getPosition(),
+        "type", body.getType());
+
+    return body;
+  }
+
+  @Override
+  public void destroyBody(Body body) {
+    if (body != null) {
+      // Fire body destruction event
+      eventSystem.fireEvent(EventTypes.PHYSICS_BODY_DESTROYED,
+          "body", body,
+          "userData", body.getUserData());
+    }
+    super.destroyBody(body);
+  }
+
+  @Override
+  public void setGravity(Vec2 gravity) {
+    super.setGravity(gravity);
+
+    // Fire gravity changed event
+    eventSystem.fireEvent(EventTypes.PHYSICS_GRAVITY_CHANGED,
+        "gravity", gravity,
+        "x", gravity.x,
+        "y", gravity.y);
   }
 }

@@ -1,4 +1,5 @@
 package com.engine.core;
+
 import org.jbox2d.common.Vec2;
 
 /**
@@ -13,43 +14,27 @@ public class EngineConfig {
   private int targetFps = 60;
   private boolean showPerformanceStats = false;
   private boolean debugPhysics = false;
-  private boolean debugColliders= false;
+  private boolean debugColliders = false;
+  private boolean debugEvents = false;
   private boolean showGrid = false;
-  private Vec2 gravity = new Vec2(0f,-9.8f);
+  private Vec2 gravity = new Vec2(0f, -9.8f);
   private String windowTitle = "Cave Engine";
-
-  public int getTargetFps() {
-    return targetFps;
-  }
-
-  public boolean isShowPerformanceStats() {
-    return showPerformanceStats;
-  }
-
-  public boolean isDebugPhysics() {
-    return debugPhysics;
-  }
-
-  public boolean isDebugColliders() {
-    return debugColliders;
-  }
-
-  public boolean isShowGrid() {
-    return showGrid;
-  }
-
-  public Vec2 getGravity() {
-    return gravity;
-  }
-
-  public String getWindowTitle() {
-    return windowTitle;
-  }
 
   /**
    * Default constructor
    */
   public EngineConfig() {
+  }
+
+  /**
+   * Wither or not to show logs for the Event System
+   *
+   * @param debugEvents  True to enable logging for the Events, false to use default
+   * @return This config instance for method chaining
+   *
+   */
+  public void setDebugEvents(boolean debugEvents) {
+    this.debugEvents = debugEvents;
   }
 
   /**
@@ -171,5 +156,37 @@ public class EngineConfig {
   public EngineConfig windowTitle(String title) {
     this.windowTitle = title;
     return this;
+  }
+
+  public int getTargetFps() {
+    return targetFps;
+  }
+
+  public boolean isShowPerformanceStats() {
+    return showPerformanceStats;
+  }
+
+  public boolean isDebugPhysics() {
+    return debugPhysics;
+  }
+
+  public boolean isDebugColliders() {
+    return debugColliders;
+  }
+
+  public boolean isShowGrid() {
+    return showGrid;
+  }
+
+  public Vec2 getGravity() {
+    return gravity;
+  }
+
+  public String getWindowTitle() {
+    return windowTitle;
+  }
+
+  public boolean debugEvents() {
+    return debugEvents;
   }
 }
