@@ -11,7 +11,13 @@ import com.engine.components.Transform;
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Results.With2;
 
-public class PhysicsWorld extends World {
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import java.util.logging.Logger;
+
+@Singleton
+public class PhysicsWorld extends World implements PhysicsSystem {
+  private static final Logger LOGGER = Logger.getLogger(PhysicsWorld.class.getName());
   private final Dominion ecs;
   // Scale factor - increase for better physics precision
   private float worldUnitsPerMeter = 30.0f;
@@ -22,12 +28,13 @@ public class PhysicsWorld extends World {
 
   private boolean debugPositions = true;
 
+  @Inject
   public PhysicsWorld(Vec2 gravity, Dominion ecs) {
     // In Box2D, positive Y is up. In screen coordinates, positive Y is down.
     // We need to make gravity work correctly in screen coordinates
     super(new Vec2(gravity.x, gravity.y)); // Invert Y gravity for Box2D
     this.ecs = ecs;
-    System.out.println("Physics world initialized with gravity: " + gravity.x + ", " + -gravity.y);
+    LOGGER.info("Physics world initialized with gravity: " + gravity.x + ", " + gravity.y);
     initializePhysicsBodies();
   }
 
@@ -92,25 +99,27 @@ public class PhysicsWorld extends World {
       transform.setY(worldY);
       transform.setRotation(angle);
 
-     
     }
   }
 
   // Helper methods for physics body creation
 
+  @Override
   public float toPhysicsWorld(float value) {
     return value / worldUnitsPerMeter;
   }
 
+  @Override
   public Vec2 toPhysicsWorld(float x, float y) {
     return new Vec2(x / worldUnitsPerMeter, y / worldUnitsPerMeter);
   }
 
+  @Override
   public float fromPhysicsWorld(float v) {
     return v * worldUnitsPerMeter;
   }
 
-  // Helper method to correctly set a box shape in the physics world
+  @Override
   public void setBoxShape(PolygonShape shape, float halfWidth, float halfHeight) {
     shape.setAsBox(toPhysicsWorld(halfWidth), toPhysicsWorld(halfHeight));
   }
@@ -122,7 +131,27 @@ public class PhysicsWorld extends World {
    */
   public void removeBody(Body body) {
     if (body != null) {
-      destroyBody(body);
+      try {
+        // Check if the body is in the world's body list
+        boolean bodyInWorld = false;
+        Body currentBody = getBodyList();
+        while (currentBody != null) {
+          if (currentBody == body) {
+            bodyInWorld = true;
+            break;
+          }
+          currentBody = currentBody.getNext();
+        }
+
+        if (bodyInWorld) {
+          destroyBody(body);
+          LOGGER.fine("Physics body removed successfully");
+        } else {
+          LOGGER.fine("Body already removed from world");
+        }
+      } catch (Exception e) {
+        LOGGER.warning("Error removing physics body: " + e.getMessage());
+      }
     }
   }
 }

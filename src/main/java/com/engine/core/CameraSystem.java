@@ -7,7 +7,6 @@ import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
 
 import java.awt.Graphics2D;
-import java.awt.geom.AffineTransform;
 import java.util.logging.Logger;
 
 public class CameraSystem {

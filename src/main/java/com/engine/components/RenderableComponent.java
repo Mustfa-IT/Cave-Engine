@@ -6,6 +6,7 @@ import com.engine.graph.Renderable;
 
 public class RenderableComponent {
   private Renderable r;
+  private boolean visible = true;
 
   public Renderable getR() {
     return r;
@@ -19,7 +20,17 @@ public class RenderableComponent {
     this.r = r;
   }
 
+  public boolean isVisible() {
+    return visible;
+  }
+
+  public void setVisible(boolean visible) {
+    this.visible = visible;
+  }
+
   public void render(Graphics2D g) {
-    r.render(g);
+    if (visible && r != null) {
+      r.render(g);
+    }
   }
 }

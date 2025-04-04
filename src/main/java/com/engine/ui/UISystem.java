@@ -2,6 +2,7 @@ package com.engine.ui;
 
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.util.logging.Logger;
 
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
@@ -16,6 +17,7 @@ import dev.dominion.ecs.api.Entity;
  * Acts as a factory for UI elements and handles their events.
  */
 public class UISystem {
+  private static final Logger LOGGER = Logger.getLogger(UISystem.class.getName());
   private final GameWindow window;
   private final Dominion ecs;
   private EntityRegistrar currentRegistrar;
@@ -66,8 +68,21 @@ public class UISystem {
    * Register created UI entity with current registrar
    */
   private Entity registerWithRegistrar(Entity entity) {
-    if (currentRegistrar != null && entity != null) {
-      return currentRegistrar.registerEntity(entity);
+    if (entity == null) {
+      LOGGER.warning("Attempted to register null entity with registrar");
+      return null;
+    }
+
+    if (currentRegistrar != null) {
+      try {
+        Entity registered = currentRegistrar.registerEntity(entity);
+        LOGGER.fine("UI entity registered with scene: " + entity);
+        return registered;
+      } catch (Exception e) {
+        LOGGER.warning("Failed to register entity with registrar: " + e.getMessage());
+      }
+    } else {
+      LOGGER.fine("No current registrar available for UI entity: " + entity);
     }
     return entity;
   }

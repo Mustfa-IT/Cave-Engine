@@ -7,6 +7,9 @@ import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
 import java.util.logging.Logger;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
 import com.engine.components.CameraComponent;
 import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
@@ -18,12 +21,14 @@ import com.engine.core.GameWindow;
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
 
-public class RenderSystem {
+@Singleton
+public class RenderSystem implements RenderingSystem {
   private final GameWindow window;
   private final Dominion world;
   private final CameraSystem cameraSystem;
   private static final Logger LOGGER = Logger.getLogger(GameEngine.class.getName());
 
+  @Inject
   public RenderSystem(GameWindow window, Dominion world, CameraSystem cameraSystem) {
     this.cameraSystem = cameraSystem;
     this.window = window;
@@ -146,7 +151,9 @@ public class RenderSystem {
   private void renderUI(Graphics2D g) {
     world.findEntitiesWith(UIComponent.class).forEach((c) -> {
       UIComponent com = c.comp();
-      com.render(g);
+      if (com.isVisible()) {
+        com.render(g);
+      }
     });
   }
 
@@ -158,18 +165,21 @@ public class RenderSystem {
       Transform transform = result.comp1();
       RenderableComponent renderable = result.comp2();
 
-      // Create a copy of the camera-transformed graphics for this entity
-      Graphics2D entityG = (Graphics2D) g.create();
+      // Only render if the component is visible
+      if (renderable.isVisible()) {
+        // Create a copy of the camera-transformed graphics for this entity
+        Graphics2D entityG = (Graphics2D) g.create();
 
-      // Apply entity's local transformations
-      entityG.translate(transform.getX(), transform.getY());
-      entityG.rotate(transform.getRotation());
-      entityG.scale(transform.getScaleX(), transform.getScaleY());
+        // Apply entity's local transformations
+        entityG.translate(transform.getX(), transform.getY());
+        entityG.rotate(transform.getRotation());
+        entityG.scale(transform.getScaleX(), transform.getScaleY());
 
-      // Render the entity with the combined transformations (camera + entity)
-      renderable.render(entityG);
+        // Render the entity with the combined transformations (camera + entity)
+        renderable.render(entityG);
 
-      entityG.dispose();
+        entityG.dispose();
+      }
     });
   }
 }

@@ -1,6 +1,5 @@
 package com.engine.core;
 
-import org.jbox2d.common.Vec2;
 
 import com.engine.entity.EntityFactory;
 import com.engine.graph.RenderSystem;
@@ -12,12 +11,14 @@ import com.engine.ui.UISystem;
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Scheduler;
 
-import java.io.FileInputStream;
-import java.io.IOException;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.inject.Inject;
+import javax.inject.Singleton;
+
+@Singleton
 public class GameEngine {
   // Logger for better debugging
   private static final Logger LOGGER = Logger.getLogger(GameEngine.class.getName());
@@ -27,14 +28,12 @@ public class GameEngine {
     INITIALIZED, RUNNING, PAUSED, STOPPED
   }
 
-  private GameWindow window;
+  private final GameWindow window;
   private State engineState = State.INITIALIZED;
-  public Dominion ecs;
-  private RenderSystem renderer;
-  private CameraSystem cameraSystem;
-  private PhysicsWorld physicsWorld;
-  // Correctly set up gravity for Box2D (positive is DOWN in Box2D)
-  private Vec2 defaultGravity = new Vec2(0, 9.8f);
+  private final Dominion ecs;
+  private final RenderSystem renderer;
+  private final CameraSystem cameraSystem;
+  private final PhysicsWorld physicsWorld;
   private boolean closedByWindow;
   private Scheduler scheduler;
   private int targetFps = 60;
@@ -45,59 +44,43 @@ public class GameEngine {
   private double averageFps = 0;
   private boolean showPerformanceStats = false;
 
-  // Configuration
-  private Properties config = new Properties();
-
   // Integrated components
-  private EntityFactory entityFactory;
+  private final EntityFactory entityFactory;
   private SceneManager sceneManager;
-  private UISystem uiSystem;
+  private final UISystem uiSystem;
+  private final Properties config;
 
-  public GameEngine() {
-    loadConfig();
-    int w = Integer.parseInt(config.getProperty("window.width", "1200"));
-    int h = Integer.parseInt(config.getProperty("window.height", "800"));
-    this.window = new GameWindow(config.getProperty("window.title", "Physics Game"), w, h);
+  @Inject
+  public GameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
+      CameraSystem cameraSystem, PhysicsWorld physicsWorld,
+      EntityFactory entityFactory, UISystem uiSystem,
+      Properties config) {
+    this.window = window;
+    this.ecs = ecs;
+    this.renderer = renderer;
+    this.cameraSystem = cameraSystem;
+    this.physicsWorld = physicsWorld;
+    this.entityFactory = entityFactory;
+    this.uiSystem = uiSystem;
+    this.config = config;
+
+    // Apply configuration
+    this.targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
+    this.showPerformanceStats = Boolean.parseBoolean(config.getProperty("engine.showPerformanceStats", "false"));
+
     this.window.setOnClose(() -> {
       stop();
       this.closedByWindow = true;
       return null;
     });
-    this.addShutdownHook(new Thread(this::stop));
+
+    addShutdownHook(new Thread(this::stop));
     init();
     LOGGER.info("GameEngine initialized. Dominion world created.");
   }
 
-  /**
-   * Loads configuration from config.properties if available
-   */
-  private void loadConfig() {
-    try {
-      FileInputStream in = new FileInputStream("config.properties");
-      config.load(in);
-      in.close();
-
-      // Apply configuration
-      targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
-      // Note: Physics world will invert the Y gravity value
-      defaultGravity = new Vec2(
-          Float.parseFloat(config.getProperty("physics.gravityX", "0")),
-          Float.parseFloat(config.getProperty("physics.gravityY", "9.8")));
-      showPerformanceStats = Boolean.parseBoolean(config.getProperty("engine.showPerformanceStats", "false"));
-
-      LOGGER.info("Configuration loaded successfully");
-    } catch (IOException e) {
-      LOGGER.log(Level.WARNING, "Could not load config.properties. Using defaults.", e);
-    }
-  }
-
   private void init() {
     try {
-      // Core systems initialization
-      this.ecs = Dominion.create();
-      this.physicsWorld = new PhysicsWorld(defaultGravity, ecs);
-      this.cameraSystem = new CameraSystem(ecs);
-
       // Set up the window resize handler
       this.window.setOnResize((width, height) -> {
         cameraSystem.updateAllViewports(width, height);
@@ -105,13 +88,6 @@ public class GameEngine {
 
       // Create camera at world origin (0,0)
       this.cameraSystem.createCamera(window.getWidth(), window.getHeight(), 0, 0);
-      this.renderer = new RenderSystem(window, ecs, cameraSystem);
-
-      // Create entity factory
-      this.entityFactory = new EntityFactory(ecs, physicsWorld);
-
-      // Initialize UI system
-      this.uiSystem = new UISystem(window, ecs);
 
       // Create scene manager with reference to engine, entity factory, and UI system
       this.sceneManager = new SceneManager(this, entityFactory, uiSystem);
@@ -132,7 +108,7 @@ public class GameEngine {
   }
 
   /**
-   * Main engine update method, calls physics and scene updates
+   * Updates physics bodies for all entities that have physics components
    */
   private void update() {
     try {
@@ -256,10 +232,6 @@ public class GameEngine {
     return window;
   }
 
-  public void setWindow(GameWindow window) {
-    this.window = window;
-  }
-
   public boolean isRunning() {
     return engineState == State.RUNNING;
   }
@@ -272,16 +244,8 @@ public class GameEngine {
     return ecs;
   }
 
-  public void setEcs(Dominion world) {
-    this.ecs = world;
-  }
-
   public RenderSystem getRenderer() {
     return renderer;
-  }
-
-  public void setRenderer(RenderSystem renderer) {
-    this.renderer = renderer;
   }
 
   public EntityFactory getEntityFactory() {

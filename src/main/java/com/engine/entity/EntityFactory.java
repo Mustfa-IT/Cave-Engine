@@ -1,6 +1,10 @@
 package com.engine.entity;
 
 import java.awt.Color;
+import java.util.logging.Logger;
+
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import org.jbox2d.collision.shapes.CircleShape;
 import org.jbox2d.collision.shapes.PolygonShape;
@@ -12,6 +16,7 @@ import com.engine.components.RenderableComponent;
 import com.engine.components.Transform;
 import com.engine.graph.Circle;
 import com.engine.graph.Rect;
+
 import com.engine.physics.PhysicsWorld;
 
 import dev.dominion.ecs.api.Dominion;
@@ -21,11 +26,14 @@ import dev.dominion.ecs.api.Entity;
  * Factory for creating game entities in world coordinates
  * where (0,0) is the center of the viewport
  */
+@Singleton
 public class EntityFactory {
+  private static final Logger LOGGER = Logger.getLogger(EntityFactory.class.getName());
   private final Dominion ecs;
   private final PhysicsWorld physicsWorld;
   private EntityRegistrar currentRegistrar;
 
+  @Inject
   public EntityFactory(Dominion ecs, PhysicsWorld physicsWorld) {
     this.ecs = ecs;
     this.physicsWorld = physicsWorld;
@@ -43,7 +51,11 @@ public class EntityFactory {
    */
   private Entity registerWithRegistrar(Entity entity) {
     if (currentRegistrar != null && entity != null) {
-      return currentRegistrar.registerEntity(entity);
+      try {
+        return currentRegistrar.registerEntity(entity);
+      } catch (Exception e) {
+        LOGGER.warning("Error registering entity: " + e.getMessage());
+      }
     }
     return entity;
   }

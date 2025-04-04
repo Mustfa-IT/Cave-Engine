@@ -3,6 +3,7 @@ package com.engine.scene;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Stack;
+import java.util.logging.Logger;
 
 import com.engine.core.GameEngine;
 import com.engine.entity.EntityFactory;
@@ -12,6 +13,7 @@ import com.engine.ui.UISystem;
  * Manages scenes in the game
  */
 public class SceneManager {
+  private static final Logger LOGGER = Logger.getLogger(SceneManager.class.getName());
   private Scene currentScene;
   private final Map<String, Scene> scenes = new HashMap<>();
   private final GameEngine engine;
@@ -46,22 +48,62 @@ public class SceneManager {
       throw new IllegalArgumentException("Scene not found: " + sceneName);
     }
 
-    // Deactivate current scene if there is one
-    if (currentScene != null) {
-      currentScene.onDeactivate();
+    Scene newScene = scenes.get(sceneName);
+
+    // Don't transition if it's the same scene
+    if (currentScene == newScene) {
+      LOGGER.info("Scene " + sceneName + " is already active");
+      return;
     }
 
-    // Set and initialize new scene
-    Scene newScene = scenes.get(sceneName);
-    this.currentScene = newScene;
+    // Prevent scene transitions from happening too quickly
+    synchronized (this) {
+      // First clear registrars to prevent new entities being created
+      entityFactory.setCurrentRegistrar(null);
+      uiSystem.setCurrentRegistrar(null);
 
-    // Set the new scene as the entity registrar for both entity factory and UI
-    // system
-    entityFactory.setCurrentRegistrar(newScene);
-    uiSystem.setCurrentRegistrar(newScene);
+      // Deactivate current scene if there is one
+      if (currentScene != null) {
+        try {
+          LOGGER.info("Deactivating current scene");
+          currentScene.onDeactivate();
 
-    // Activate the new scene
-    newScene.onActivate();
+          // Give the ECS time to process any cleanup
+          try {
+            Thread.sleep(100);
+          } catch (InterruptedException e) {
+            LOGGER.warning("Scene transition sleep interrupted: " + e.getMessage());
+          }
+
+          // Encourage garbage collection
+          System.gc();
+
+          // Give GC time to work
+          try {
+            Thread.sleep(50);
+          } catch (InterruptedException e) {
+            LOGGER.warning("GC wait interrupted: " + e.getMessage());
+          }
+        } catch (Exception e) {
+          LOGGER.severe("Error deactivating current scene: " + e.getMessage());
+        }
+      }
+
+      // Set the new scene
+      this.currentScene = newScene;
+
+      // Set the new scene as the entity registrar for both entity factory and UI
+      // system
+      try {
+        entityFactory.setCurrentRegistrar(newScene);
+        uiSystem.setCurrentRegistrar(newScene);
+
+        LOGGER.info("Activating new scene: " + sceneName);
+        newScene.onActivate();
+      } catch (Exception e) {
+        LOGGER.severe("Error activating new scene: " + e.getMessage());
+      }
+    }
   }
 
   /**
@@ -73,17 +115,32 @@ public class SceneManager {
     if (!scenes.containsKey(sceneName)) {
       throw new IllegalArgumentException("Scene not found: " + sceneName);
     }
-    if (currentScene != null) {
-      currentScene.onDeactivate();
-      sceneStack.push(currentScene);
+
+    synchronized (this) {
+      if (currentScene != null) {
+        // Clear registrars first
+        entityFactory.setCurrentRegistrar(null);
+        uiSystem.setCurrentRegistrar(null);
+
+        currentScene.onDeactivate();
+        sceneStack.push(currentScene);
+
+        // Give the ECS a chance to process
+        try {
+          Thread.sleep(50);
+        } catch (InterruptedException e) {
+          LOGGER.warning("Scene push interrupted: " + e.getMessage());
+        }
+      }
+
+      currentScene = scenes.get(sceneName);
+
+      // Set the new scene as registrar for both systems
+      entityFactory.setCurrentRegistrar(currentScene);
+      uiSystem.setCurrentRegistrar(currentScene);
+
+      currentScene.onActivate();
     }
-    currentScene = scenes.get(sceneName);
-
-    // Set the new scene as registrar for both systems
-    entityFactory.setCurrentRegistrar(currentScene);
-    uiSystem.setCurrentRegistrar(currentScene);
-
-    currentScene.onActivate();
   }
 
   /**
@@ -91,14 +148,28 @@ public class SceneManager {
    */
   public void popScene() {
     if (!sceneStack.isEmpty()) {
-      currentScene.onDeactivate();
-      currentScene = sceneStack.pop();
+      synchronized (this) {
+        // Clear registrars first
+        entityFactory.setCurrentRegistrar(null);
+        uiSystem.setCurrentRegistrar(null);
 
-      // Set the previous scene as registrar for both systems
-      entityFactory.setCurrentRegistrar(currentScene);
-      uiSystem.setCurrentRegistrar(currentScene);
+        currentScene.onDeactivate();
 
-      currentScene.onActivate();
+        // Give the ECS a chance to process
+        try {
+          Thread.sleep(50);
+        } catch (InterruptedException e) {
+          LOGGER.warning("Scene pop interrupted: " + e.getMessage());
+        }
+
+        currentScene = sceneStack.pop();
+
+        // Set the previous scene as registrar for both systems
+        entityFactory.setCurrentRegistrar(currentScene);
+        uiSystem.setCurrentRegistrar(currentScene);
+
+        currentScene.onActivate();
+      }
     }
   }
 
@@ -116,5 +187,41 @@ public class SceneManager {
    */
   public Scene getCurrentScene() {
     return currentScene;
+  }
+
+  /**
+   * Force cleanup of all scenes
+   * This is useful for complete resets or when switching between vastly different
+   * game modes
+   */
+  public void cleanupAllScenes() {
+    synchronized (this) {
+      LOGGER.info("Cleaning up all scenes");
+
+      // First set all registrars to null to prevent new entity creation
+      entityFactory.setCurrentRegistrar(null);
+      uiSystem.setCurrentRegistrar(null);
+
+      // Then clean up each scene
+      for (Scene scene : scenes.values()) {
+        try {
+          scene.forceCleanup();
+        } catch (Exception e) {
+          LOGGER.severe("Error cleaning up scene: " + e.getMessage());
+        }
+      }
+
+      // Give time for cleanup
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        LOGGER.warning("Cleanup sleep interrupted: " + e.getMessage());
+      }
+
+      // Run garbage collection
+      System.gc();
+
+      LOGGER.info("All scenes cleaned up");
+    }
   }
 }

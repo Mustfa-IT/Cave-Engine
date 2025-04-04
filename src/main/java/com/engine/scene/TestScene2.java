@@ -9,7 +9,6 @@ import com.engine.entity.EntityFactory;
  */
 public class TestScene2 extends Scene {
   long startTime;
-  
 
   public TestScene2(EntityFactory entityFactory) {
     super(entityFactory);
@@ -35,7 +34,6 @@ public class TestScene2 extends Scene {
     entityFactory.createGround(-200, 200, 200, 20, Color.LIGHT_GRAY);
 
     System.out.println("TestScene 2 initialized");
-    engine.getUiSystem().createLabel("Hello",100f,100f);
   }
 
   @Override
