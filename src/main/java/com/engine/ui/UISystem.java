@@ -160,7 +160,9 @@ public class UISystem {
    * Factory method to create a debug overlay
    */
   public Entity createDebugOverlay(float x, float y) {
-    DebugOverlay overlay = new DebugOverlay(x, y, 200, 100);
+    int overlayWidth = (int) (window.getWidth() * 0.2); // 20% of the window width
+    int overlayHeight = (int) (window.getHeight() * 0.15); // 15% of the window height
+    DebugOverlay overlay = new DebugOverlay(x, y, overlayWidth, overlayHeight);
     Entity entity = ecs.createEntity(
         "ui_debug_overlay",
         new UIComponent(overlay),

@@ -3,6 +3,7 @@ package com;
 import java.awt.event.KeyEvent;
 import java.awt.Graphics2D;
 import java.awt.Color;
+import java.io.File;
 
 import com.engine.core.GameEngine;
 import com.engine.core.AbstractGameObject;
@@ -14,7 +15,8 @@ import com.engine.physics.Collision;
 import com.engine.entity.EntityFactory;
 import com.engine.entity.EntityFactory.PhysicsParameters;
 import com.engine.scene.TestScene;
-import com.engine.scene.TestScene2;
+import com.engine.events.GameEvent;
+import com.engine.assets.AssetManager;
 
 import dev.dominion.ecs.api.Entity;
 
@@ -22,6 +24,12 @@ import org.jbox2d.dynamics.BodyType;
 
 public class Main {
   public static void main(String[] args) {
+    // Create assets directory if it doesn't exist
+    File assetsDir = new File("assets");
+    if (!assetsDir.exists() && !assetsDir.mkdirs()) {
+        System.err.println("Failed to create assets directory.");
+    }
+
     // Use Dagger to create the engine with simplified initialization
     GameEngine game = createEngine();
 
@@ -34,16 +42,48 @@ public class Main {
         .windowTitle("Enhanced Physics Engine"))
         .createCamera(0, 0, 1.0f)
         .createScene("test", () -> new TestScene(game.getEntityFactory()))
-        .createScene("test2", () -> new TestScene2(game.getEntityFactory()))
-        .createDebugOverlay() // Add debug overlay
-        .setActiveScene("test2")
-        .start();
+        .createDebugOverlay(); // Add debug overlay
+
+    // Set active scene after all scenes are created
+    game.setActiveScene("test");
+
+    // Start the engine
+    game.start();
 
     // Set up input handlers for creating custom GameObjects
     setupInputHandlers(game);
 
     // Create UI elements for controlling the engine
     setupUIControls(game);
+
+    // Set up event listeners
+    setupEventListeners(game);
+  }
+
+  /**
+   * Sets up event listeners to demonstrate the event system
+   */
+  private static void setupEventListeners(GameEngine game) {
+    var eventSystem = game.getEventSystem();
+
+    // Listen for scene changes
+    eventSystem.addEventListener("scene:change", event -> {
+      System.out.println("Scene changed to: " + event.getData("name", "unknown"));
+    });
+
+    // Listen for game paused/resumed
+    eventSystem.addEventListener("game:pause", event -> {
+      System.out.println("Game paused");
+    });
+
+    eventSystem.addEventListener("game:resume", event -> {
+      System.out.println("Game resumed");
+    });
+
+    // Fire an event when the game starts
+    eventSystem.fireEvent(new GameEvent("game:start")
+        .addData("time", System.currentTimeMillis())
+        .addData("version", "1.0"));
   }
 
   /**
@@ -67,7 +107,6 @@ public class Main {
 
     // Scene switching
     inputManager.onKeyPress(KeyEvent.VK_1, e -> game.setActiveScene("test"));
-    inputManager.onKeyPress(KeyEvent.VK_2, e -> game.setActiveScene("test2"));
 
     // Debug overlay toggle with F3
     inputManager.onKeyPress(KeyEvent.VK_F3, e -> game.toggleDebugOverlay());
@@ -79,14 +118,14 @@ public class Main {
     inputManager.onKeyPress(KeyEvent.VK_F12,
         e -> game.takeScreenshot("screenshot_" + System.currentTimeMillis() + ".png"));
 
-    // Create custom GameObject on click at world position
-    inputManager.onMousePress(1, e -> {
-      float[] worldPos = inputManager.getMouseWorldPosition();
-      System.out.println("Mouse clicked at world position: " + worldPos[0] + ", " + worldPos[1]);
+    // // Create custom GameObject on click at world position
+    // inputManager.onMousePress(1, e -> {
+    //   float[] worldPos = inputManager.getMouseWorldPosition();
+    //   System.out.println("Mouse clicked at world position: " + worldPos[0] + ", " + worldPos[1]);
 
-      // Create a custom GameObject at click position
-      entityFactory.createGameObject(worldPos[0], worldPos[1], new RotatingSquare(50, Color.YELLOW));
-    });
+    //   // Create a custom GameObject at click position
+    //   entityFactory.createGameObject(worldPos[0], worldPos[1], new RotatingSquare(50, Color.YELLOW));
+    // });
 
     // Create physics GameObject with right click (using new component-based
     // approach)
@@ -122,7 +161,7 @@ public class Main {
     var uiSystem = game.getUiSystem();
 
     // Create gravity slider
-    dev.dominion.ecs.api.Entity gravitySlider = uiSystem.createSlider("Gravity", 20, 50, 150, 20, 0, 20, 9.8f);
+    dev.dominion.ecs.api.Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, 0, 20, 9.8f);
 
     // Set callback for when value changes
     uiSystem.setSliderCallback(gravitySlider, (value) -> {

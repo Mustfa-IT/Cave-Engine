@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Stack;
 import java.util.logging.Logger;
 
+import org.openjdk.tools.javac.util.Pair;
+
 import com.engine.core.GameEngine;
 import com.engine.entity.EntityFactory;
 import com.engine.ui.UISystem;
@@ -14,10 +16,10 @@ import com.engine.ui.UISystem;
  */
 public class SceneManager {
   private static final Logger LOGGER = Logger.getLogger(SceneManager.class.getName());
-  private Scene currentScene;
+  private Pair<String, Scene> currentScene;
   private final Map<String, Scene> scenes = new HashMap<>();
   private final GameEngine engine;
-  private final Stack<Scene> sceneStack = new Stack<>();
+  private final Stack<Pair<String, Scene>> sceneStack = new Stack<>();
   private final EntityFactory entityFactory;
   private final UISystem uiSystem;
 
@@ -51,7 +53,7 @@ public class SceneManager {
     Scene newScene = scenes.get(sceneName);
 
     // Don't transition if it's the same scene
-    if (currentScene == newScene) {
+    if (currentScene != null && currentScene.snd == newScene) {
       LOGGER.info("Scene " + sceneName + " is already active");
       return;
     }
@@ -66,7 +68,7 @@ public class SceneManager {
       if (currentScene != null) {
         try {
           LOGGER.info("Deactivating current scene");
-          currentScene.onDeactivate();
+          currentScene.snd.onDeactivate();
 
           // Give the ECS time to process any cleanup
           try {
@@ -90,7 +92,7 @@ public class SceneManager {
       }
 
       // Set the new scene
-      this.currentScene = newScene;
+      this.currentScene = new Pair<String, Scene>(sceneName, newScene);
 
       // Set the new scene as the entity registrar for both entity factory and UI
       // system
@@ -122,7 +124,7 @@ public class SceneManager {
         entityFactory.setCurrentRegistrar(null);
         uiSystem.setCurrentRegistrar(null);
 
-        currentScene.onDeactivate();
+        currentScene.snd.onDeactivate();
         sceneStack.push(currentScene);
 
         // Give the ECS a chance to process
@@ -133,13 +135,13 @@ public class SceneManager {
         }
       }
 
-      currentScene = scenes.get(sceneName);
+      currentScene = new Pair<String, Scene>(sceneName, scenes.get(sceneName));
 
       // Set the new scene as registrar for both systems
-      entityFactory.setCurrentRegistrar(currentScene);
-      uiSystem.setCurrentRegistrar(currentScene);
+      entityFactory.setCurrentRegistrar(currentScene.snd);
+      uiSystem.setCurrentRegistrar(currentScene.snd);
 
-      currentScene.onActivate();
+      currentScene.snd.onActivate();
     }
   }
 
@@ -153,7 +155,9 @@ public class SceneManager {
         entityFactory.setCurrentRegistrar(null);
         uiSystem.setCurrentRegistrar(null);
 
-        currentScene.onDeactivate();
+        if (currentScene != null) {
+          currentScene.snd.onDeactivate();
+        }
 
         // Give the ECS a chance to process
         try {
@@ -165,10 +169,10 @@ public class SceneManager {
         currentScene = sceneStack.pop();
 
         // Set the previous scene as registrar for both systems
-        entityFactory.setCurrentRegistrar(currentScene);
-        uiSystem.setCurrentRegistrar(currentScene);
+        entityFactory.setCurrentRegistrar(currentScene.snd);
+        uiSystem.setCurrentRegistrar(currentScene.snd);
 
-        currentScene.onActivate();
+        currentScene.snd.onActivate();
       }
     }
   }
@@ -178,7 +182,7 @@ public class SceneManager {
    */
   public void update(double deltaTime) {
     if (currentScene != null) {
-      currentScene.update(deltaTime);
+      currentScene.snd.update(deltaTime);
     }
   }
 
@@ -186,7 +190,15 @@ public class SceneManager {
    * Get the current active scene
    */
   public Scene getCurrentScene() {
-    return currentScene;
+    return currentScene != null ? currentScene.snd : null;
+  }
+
+  public String getCurrentSceneName() {
+    return currentScene != null ? currentScene.fst : null;
+  }
+
+  public String[] getSceneNames() {
+    return scenes.keySet().toArray(new String[0]);
   }
 
   /**

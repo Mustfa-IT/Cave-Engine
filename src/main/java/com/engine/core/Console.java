@@ -13,6 +13,9 @@ import java.util.function.Consumer;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import com.engine.events.GameEvent;
 
 /**
  * In-game console for displaying logs and executing commands
@@ -88,6 +91,60 @@ public class Console {
         addLogLine("Usage: debug [on|off]");
       }
     }, "Toggle debug rendering");
+
+    registerCommand("stats", args -> {
+      Runtime runtime = Runtime.getRuntime();
+      long totalMemory = runtime.totalMemory() / (1024 * 1024);
+      long freeMemory = runtime.freeMemory() / (1024 * 1024);
+      long usedMemory = totalMemory - freeMemory;
+
+      addLogLine("=== System Statistics ===");
+      addLogLine("FPS: " + String.format("%.2f", engine.getFps()));
+      addLogLine("Memory: " + usedMemory + "MB used / " + totalMemory + "MB total");
+      // addLogLine("Entities: " + engine.getEcs().findEntitiesWith().count());
+      addLogLine("Physics Bodies: " + engine.getPhysicsWorld().getBodyCount());
+      addLogLine("Assets: " + engine.getAssetManager().getAssetCount());
+    }, "Display system statistics");
+
+    registerCommand("scene", args -> {
+      if (args.length == 0) {
+        addLogLine("Current scene: " + engine.getSceneManager().getCurrentSceneName());
+        addLogLine("Available scenes: " + String.join(", ", engine.getSceneManager().getSceneNames()));
+      } else {
+        try {
+          engine.setActiveScene(args[0]);
+          addLogLine("Changed to scene: " + args[0]);
+        } catch (Exception e) {
+          addLogLine("Error changing scene: " + e.getMessage());
+        }
+      }
+    }, "Get scene info or change to a different scene");
+
+    registerCommand("event", args -> {
+      if (args.length < 1) {
+        addLogLine("Usage: event <eventType> [key=value ...]");
+        return;
+      }
+
+      String eventType = args[0];
+      GameEvent event = new GameEvent(eventType);
+
+      // Process additional key=value parameters
+      for (int i = 1; i < args.length; i++) {
+        String[] keyValue = args[i].split("=", 2);
+        if (keyValue.length == 2) {
+          event.addData(keyValue[0], keyValue[1]);
+        }
+      }
+
+      engine.getEventSystem().fireEvent(event);
+      addLogLine("Event fired: " + event);
+    }, "Fire a custom event");
+
+    registerCommand("time", args -> {
+      SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+      addLogLine("Current time: " + sdf.format(new Date()));
+    }, "Display the current system time");
   }
 
   public void registerCommand(String name, ConsoleCommand command, String description) {

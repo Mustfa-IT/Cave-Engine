@@ -132,12 +132,16 @@ public class RenderSystem implements RenderingSystem {
    */
   private void drawWorldGrid(Graphics2D g) {
     Entity camera = cameraSystem.getActiveCamera();
-    if (camera == null)
+    if (camera == null) {
+      LOGGER.warning("No active camera found for grid drawing");
       return;
+    }
 
     CameraComponent camComponent = camera.get(CameraComponent.class);
-    if (camComponent == null)
+    if (camComponent == null) {
+      LOGGER.warning("Camera entity has no CameraComponent");
       return;
+    }
 
     // Get screen dimensions
     int screenWidth = window.getWidth();
@@ -154,38 +158,42 @@ public class RenderSystem implements RenderingSystem {
     g2d.setColor(new Color(0, 0, 255, 128)); // Semi-transparent blue
     g2d.setStroke(new BasicStroke(0.5f));
 
-    // Draw grid lines
-    float gridSize = 50; // Size of each grid cell
+    try {
+      // Draw grid lines
+      float gridSize = 50; // Size of each grid cell
 
-    // Calculate grid bounds based on screen edges in world space
-    float startX = (float) (Math.floor(topLeft[0] / gridSize) * gridSize);
-    float endX = (float) (Math.ceil(bottomRight[0] / gridSize) * gridSize);
-    float startY = (float) (Math.floor(topLeft[1] / gridSize) * gridSize);
-    float endY = (float) (Math.ceil(bottomRight[1] / gridSize) * gridSize);
+      // Calculate grid bounds based on screen edges in world space
+      float startX = (float) (Math.floor(topLeft[0] / gridSize) * gridSize);
+      float endX = (float) (Math.ceil(bottomRight[0] / gridSize) * gridSize);
+      float startY = (float) (Math.floor(topLeft[1] / gridSize) * gridSize);
+      float endY = (float) (Math.ceil(bottomRight[1] / gridSize) * gridSize);
 
-    // Draw vertical grid lines
-    for (float x = startX; x <= endX; x += gridSize) {
-      g2d.drawLine((int) x, (int) startY, (int) x, (int) endY);
+      // Draw vertical grid lines
+      for (float x = startX; x <= endX; x += gridSize) {
+        g2d.drawLine((int) x, (int) startY, (int) x, (int) endY);
+      }
+
+      // Draw horizontal grid lines
+      for (float y = startY; y <= endY; y += gridSize) {
+        g2d.drawLine((int) startX, (int) y, (int) endX, (int) y);
+      }
+
+      // Draw the main axes with stronger lines
+      g2d.setStroke(new BasicStroke(2.0f));
+      g2d.setColor(Color.RED);
+      g2d.drawLine(-1000, 0, 1000, 0); // X-axis
+
+      g2d.setColor(Color.GREEN);
+      g2d.drawLine(0, -1000, 0, 1000); // Y-axis (now points up)
+
+      // Draw origin marker
+      g2d.setColor(Color.WHITE);
+      g2d.fillOval(-5, -5, 10, 10);
+    } catch (Exception e) {
+      LOGGER.warning("Error drawing grid: " + e.getMessage());
+    } finally {
+      g2d.dispose();
     }
-
-    // Draw horizontal grid lines
-    for (float y = startY; y <= endY; y += gridSize) {
-      g2d.drawLine((int) startX, (int) y, (int) endX, (int) y);
-    }
-
-    // Draw the main axes with stronger lines
-    g2d.setStroke(new BasicStroke(2.0f));
-    g2d.setColor(Color.RED);
-    g2d.drawLine(-1000, 0, 1000, 0); // X-axis
-
-    g2d.setColor(Color.GREEN);
-    g2d.drawLine(0, -1000, 0, 1000); // Y-axis (now points up)
-
-    // Draw origin marker
-    g2d.setColor(Color.WHITE);
-    g2d.fillOval(-5, -5, 10, 10);
-
-    g2d.dispose();
   }
 
   /**

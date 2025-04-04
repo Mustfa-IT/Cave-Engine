@@ -16,11 +16,7 @@ public class TestScene extends Scene {
 
   @Override
   public void update(double deltaTime) {
-    // Original scene transition logic
-    if (((System.currentTimeMillis() - startTime) / 1000) > 3) {
-      startTime = System.currentTimeMillis();
-      super.engine.getSceneManager().setActiveScene("test2");
-    }
+   
   }
 
   @Override

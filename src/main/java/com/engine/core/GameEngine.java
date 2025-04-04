@@ -11,6 +11,9 @@ import com.engine.physics.PhysicsWorld;
 import com.engine.scene.Scene;
 import com.engine.scene.SceneManager;
 import com.engine.ui.UISystem;
+import com.engine.events.EventSystem;
+import com.engine.events.GameEvent;
+import com.engine.assets.AssetManager;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -75,11 +78,16 @@ public class GameEngine implements OverlayRenderer {
   private final InputManager inputManager;
   private final Properties config;
 
+  // New systems
+  private final EventSystem eventSystem;
+  private final AssetManager assetManager;
+
   @Inject
   public GameEngine(GameWindow window, Dominion ecs, RenderSystem renderer,
       CameraSystem cameraSystem, PhysicsWorld physicsWorld,
       EntityFactory entityFactory, UISystem uiSystem,
-      InputManager inputManager, Properties config) {
+      InputManager inputManager, Properties config,
+      EventSystem eventSystem, AssetManager assetManager) {
     this.window = window;
     this.ecs = ecs;
     this.renderer = renderer;
@@ -89,10 +97,16 @@ public class GameEngine implements OverlayRenderer {
     this.uiSystem = uiSystem;
     this.inputManager = inputManager;
     this.config = config;
+    this.eventSystem = eventSystem;
+    this.assetManager = assetManager;
 
     // Apply configuration
     this.targetFps = Integer.parseInt(config.getProperty("engine.targetFps", "60"));
     this.showPerformanceStats = Boolean.parseBoolean(config.getProperty("engine.showPerformanceStats", "false"));
+
+    // Set up asset path
+    String assetPath = config.getProperty("engine.assetPath", "assets");
+    assetManager.setBasePath(assetPath);
 
     this.window.setOnClose(() -> {
       stop();
@@ -102,6 +116,9 @@ public class GameEngine implements OverlayRenderer {
 
     // Tell the renderer about this engine so it can call renderOverlays
     renderer.setOverlayRenderer(this);
+
+    // Register game engine events
+    setupEventListeners();
 
     addShutdownHook(new Thread(this::stop));
     init();
@@ -136,6 +153,20 @@ public class GameEngine implements OverlayRenderer {
     }
   }
 
+  private void setupEventListeners() {
+    // Listen for game pause/resume events
+    eventSystem.addEventListener("game:pause", event -> pause());
+    eventSystem.addEventListener("game:resume", event -> resume());
+
+    // Listen for scene change events
+    eventSystem.addEventListener("scene:change", event -> {
+      String sceneName = event.getData("name", "");
+      if (!sceneName.isEmpty()) {
+        setActiveScene(sceneName);
+      }
+    });
+  }
+
   /**
    * Updates physics bodies for all entities that have physics components
    */
@@ -147,6 +178,9 @@ public class GameEngine implements OverlayRenderer {
       }
 
       double deltaTime = this.scheduler.deltaTime();
+
+      // Process events
+      eventSystem.processEvents();
 
       // Update physics
       this.physicsWorld.update(deltaTime);
@@ -290,6 +324,13 @@ public class GameEngine implements OverlayRenderer {
       return;
     engineState = State.STOPPED;
     LOGGER.info("Stopping the Game Engine...");
+
+    // Clean up resources
+    assetManager.shutdown();
+
+    // Notify listeners
+    eventSystem.fireEvent(new GameEvent("game:shutdown"));
+
     scheduler.shutDown(); // Stop the scheduler
   }
 
@@ -394,7 +435,8 @@ public class GameEngine implements OverlayRenderer {
       // Update physics stats
       debugOverlay.updateStat("Bodies", physicsWorld.getBodyCount());
 
-      // Update other engine stats as needed
+      // Update assets count
+      debugOverlay.updateStat("Assets", assetManager.getAssetCount());
     }
   }
 
@@ -673,5 +715,23 @@ public class GameEngine implements OverlayRenderer {
 
   public boolean isDebugGrid() {
     return debugGrid;
+  }
+
+  /**
+   * Get the event system
+   *
+   * @return The event system instance
+   */
+  public EventSystem getEventSystem() {
+    return eventSystem;
+  }
+
+  /**
+   * Get the asset manager
+   *
+   * @return The asset manager instance
+   */
+  public AssetManager getAssetManager() {
+    return assetManager;
   }
 }
