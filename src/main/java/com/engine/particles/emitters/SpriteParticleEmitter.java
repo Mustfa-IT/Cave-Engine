@@ -5,14 +5,25 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.util.Map;
 import java.util.Random;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
 
 import com.engine.particles.AbstractParticleEmitter;
+import com.engine.particles.BatchRenderer;
+import com.engine.particles.BatchableEmitter;
 import com.engine.particles.Particle;
+import com.engine.particles.ParticlePool;
+import com.engine.particles.PooledParticleEmitter;
+import com.engine.util.SpatialHashGrid;
+import com.engine.util.ParticleQuadTree;
+import com.engine.particles.SpatialAware;
 
 /**
  * Emitter that produces particles using sprite images.
  */
-public class SpriteParticleEmitter extends AbstractParticleEmitter {
+public class SpriteParticleEmitter extends AbstractParticleEmitter
+    implements BatchableEmitter, PooledParticleEmitter, SpatialAware {
 
   public static class SpriteParticle extends Particle {
     private BufferedImage sprite;
@@ -20,6 +31,19 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
     public SpriteParticle(float x, float y, float size, Color color, float lifetime, BufferedImage sprite) {
       super(x, y, size, color, lifetime);
       this.sprite = sprite;
+    }
+
+    @Override
+    public void reset(float x, float y, float size, Color color, float lifetime) {
+      super.reset(x, y, size, color, lifetime);
+      // Sprite reference will be set separately
+    }
+
+    @Override
+    public void prepareForPool() {
+      super.prepareForPool();
+      // Remove reference to sprite
+      this.sprite = null;
     }
 
     @Override
@@ -55,10 +79,19 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
       g.setTransform(originalTransform);
       g.setComposite(originalComposite);
     }
+
+    public BufferedImage getSprite() {
+      return sprite;
+    }
+
+    public void setSprite(BufferedImage sprite) {
+      this.sprite = sprite;
+    }
   }
 
   private final Random random = new Random();
   private BufferedImage[] sprites;
+  private ParticlePool particlePool;
 
   // Particle properties
   private float minSize = 10.0f;
@@ -71,6 +104,9 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
   private float baseAngle = 0; // Initial emission direction
   private float gravity = 0;
   private float fadeRate = 0.95f; // Alpha reduction per second
+
+  // Optimization settings
+  private boolean useInstancing = true;
 
   public SpriteParticleEmitter(float x, float y, BufferedImage[] sprites) {
     setPosition(x, y);
@@ -96,7 +132,24 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
     float size = minSize + random.nextFloat() * (maxSize - minSize);
 
     // Create sprite particle
-    SpriteParticle p = new SpriteParticle(x, y, size, Color.WHITE, lifetime, sprite);
+    SpriteParticle p;
+
+    // Use particle pool if available
+    if (particlePool != null) {
+      Particle baseParticle = particlePool.obtainParticle(x, y, size, Color.WHITE, lifetime);
+
+      // Convert to sprite particle if it's not already one
+      if (baseParticle instanceof SpriteParticle) {
+        p = (SpriteParticle) baseParticle;
+        p.setSprite(sprite);
+      } else {
+        // If the pool gave us a base particle, we need to create a sprite particle
+        p = new SpriteParticle(x, y, size, Color.WHITE, lifetime, sprite);
+      }
+    } else {
+      // Create new if no pool
+      p = new SpriteParticle(x, y, size, Color.WHITE, lifetime, sprite);
+    }
 
     // Randomize velocity based on angle and speed
     float angle = baseAngle + (random.nextFloat() - 0.5f) * spreadAngle;
@@ -123,6 +176,17 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
       float currentAlpha = p.getAlpha();
       float newAlpha = Math.max(0, currentAlpha - fadeRate * deltaTime);
       p.setAlpha(newAlpha);
+    }
+
+    // Return inactive particles to pool
+    if (particlePool != null) {
+      particles.removeIf(p -> {
+        if (!p.isActive()) {
+          particlePool.recycleParticle(p);
+          return true;
+        }
+        return false;
+      });
     }
   }
 
@@ -152,5 +216,58 @@ public class SpriteParticleEmitter extends AbstractParticleEmitter {
       this.gravity = ((Number) params.get("gravity")).floatValue();
     if (params.containsKey("fadeRate"))
       this.fadeRate = ((Number) params.get("fadeRate")).floatValue();
+    if (params.containsKey("useInstancing"))
+      this.useInstancing = (Boolean) params.get("useInstancing");
+  }
+
+  @Override
+  public void setParticlePool(ParticlePool pool) {
+    this.particlePool = pool;
+  }
+
+  @Override
+  public String getBatchType() {
+    return useInstancing ? "instanced" : "sprite";
+  }
+
+  @Override
+  public void addToBatch(BatchRenderer renderer) {
+    for (Particle p : particles) {
+      if (p.isActive() && p instanceof SpriteParticle) {
+        renderer.addParticle(p);
+      }
+    }
+  }
+
+  @Override
+  public void registerInSpatialStructure(SpatialHashGrid grid) {
+    for (Particle p : particles) {
+      if (p.isActive()) {
+        float size = p.getSize();
+        grid.insertObject(p, p.getX() - size / 2, p.getY() - size / 2, size, size);
+      }
+    }
+  }
+
+  @Override
+  public void registerInQuadTree(ParticleQuadTree quadTree) {
+    // Create a defensive copy to avoid concurrent modification
+    List<Particle> particlesCopy;
+    try {
+      synchronized (particles) {
+        particlesCopy = new ArrayList<>(particles);
+      }
+
+      // Only pass active particles
+      List<Particle> activeParticles = particlesCopy.stream()
+          .filter(p -> p != null && p.isActive())
+          .collect(Collectors.toList());
+
+      // Use the efficient batch insert for better performance
+      quadTree.insertParticles(activeParticles);
+    } catch (Exception e) {
+      // Catch exceptions to prevent the entire particle system from crashing
+      System.err.println("Error in SpriteParticleEmitter.registerInQuadTree: " + e.getMessage());
+    }
   }
 }

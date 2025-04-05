@@ -126,7 +126,7 @@ public class CameraSystem {
     // Adjust for viewport position
     screenX -= (cam.getViewportX() + cam.getViewportWidth() / 2.0);
     // Flip Y coordinate - viewport center is (0,0), up is negative in screen space
-    screenY =(float) (cam.getViewportY() + cam.getViewportHeight() / 2.0) - screenY;
+    screenY = (float) (cam.getViewportY() + cam.getViewportHeight() / 2.0) - screenY;
 
     // Apply inverse zoom
     screenX /= cam.getZoom();
@@ -214,5 +214,59 @@ public class CameraSystem {
   public void update(float deltaTime) {
     if (activeCamera == null)
       return;
+  }
+
+  /**
+   * Get the current view bounds in world coordinates
+   *
+   * @return float array with [x, y, width, height] in world space
+   */
+  public float[] getWorldViewBounds() {
+    Entity camera = getActiveCamera();
+    if (camera == null) {
+      // Return default bounds if no camera is active
+      return new float[] { -1000, -1000, 2000, 2000 };
+    }
+
+    CameraComponent camComponent = camera.get(CameraComponent.class);
+    Transform transform = camera.get(Transform.class);
+
+    if (camComponent == null || transform == null) {
+      return new float[] { -1000, -1000, 2000, 2000 };
+    }
+
+    // Calculate visible width and height in world units
+    float zoom = camComponent.getZoom();
+    float visibleWidth = camComponent.getBaseWidth() / zoom;
+    float visibleHeight = camComponent.getBaseHeight() / zoom;
+
+    // Get camera position (center of view)
+    float cameraX = (float) transform.getX();
+    float cameraY = (float) transform.getY();
+
+    // Calculate top-left corner of view
+    float left = cameraX - visibleWidth / 2;
+    float top = cameraY - visibleHeight / 2;
+
+    return new float[] { left, top, visibleWidth, visibleHeight };
+  }
+
+  /**
+   * Get the position of the active camera in world coordinates
+   *
+   * @return float array with [x, y] position
+   */
+  public float[] getCameraPosition() {
+    Entity camera = getActiveCamera();
+    if (camera == null) {
+      return new float[] { 0, 0 };
+    }
+
+    Transform transform = camera.get(Transform.class);
+    if (transform == null) {
+      return new float[] { 0, 0 };
+    }
+
+    return new float[] { (float) transform.getX(), (float) transform.getY() };
   }
 }

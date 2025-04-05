@@ -30,6 +30,15 @@ public class Particle {
   // Active state
   private boolean active = true;
 
+  // For pooling - track if this particle is marked for recycling
+  private boolean recyclable = false;
+
+  // For optimization - last frame rendered (to avoid redundant rendering)
+  private long lastFrameRendered = -1;
+
+  // For batch rendering - data needed by batch renderer
+  private int batchId = -1;
+
   /**
    * Create a new particle with default properties
    */
@@ -45,8 +54,42 @@ public class Particle {
   }
 
   /**
+   * Reset a particle for reuse from pool
+   */
+  public void reset(float x, float y, float size, Color color, float maxLifetime) {
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.ax = 0;
+    this.ay = 0;
+    this.size = size;
+    this.initialSize = size;
+    this.finalSize = size;
+    this.color = color;
+    this.alpha = 1.0f;
+    this.rotation = 0;
+    this.rotationSpeed = 0;
+    this.maxLifetime = maxLifetime;
+    this.remainingLifetime = maxLifetime;
+    this.active = true;
+    this.recyclable = false;
+    this.batchId = -1;
+    this.lastFrameRendered = -1;
+  }
+
+  /**
+   * Prepare the particle for returning to pool (clear references)
+   */
+  public void prepareForPool() {
+    this.color = null;
+    this.active = false;
+    this.recyclable = true;
+  }
+
+  /**
    * Update particle state based on delta time
-   * 
+   *
    * @param deltaTime Time since last update in seconds
    */
   public void update(float deltaTime) {
@@ -57,15 +100,17 @@ public class Particle {
     remainingLifetime -= deltaTime;
     if (remainingLifetime <= 0) {
       active = false;
+      recyclable = true;
       return;
     }
 
     // Calculate life progress (0 to 1)
     float lifeProgress = 1.0f - (remainingLifetime / maxLifetime);
 
-    // Update position based on velocity
-    x += vx * deltaTime;
-    y += vy * deltaTime;
+    // Update position based on velocity (optimize by integrating acceleration)
+    float halfDeltaTimeSquared = 0.5f * deltaTime * deltaTime;
+    x += vx * deltaTime + ax * halfDeltaTimeSquared;
+    y += vy * deltaTime + ay * halfDeltaTimeSquared;
 
     // Update velocity based on acceleration
     vx += ax * deltaTime;
@@ -80,7 +125,7 @@ public class Particle {
 
   /**
    * Render the particle
-   * 
+   *
    * @param g Graphics context
    */
   public void render(Graphics2D g) {
@@ -222,5 +267,48 @@ public class Particle {
 
   public float getRemainingLifetime() {
     return remainingLifetime;
+  }
+
+  /**
+   * Marks this particle as recyclable (ready to return to pool)
+   */
+  public void markAsRecyclable() {
+    this.recyclable = true;
+    this.active = false;
+  }
+
+  /**
+   * Checks if this particle is ready for recycling
+   */
+  public boolean isRecyclable() {
+    return recyclable;
+  }
+
+  /**
+   * Set the batch ID for batch rendering
+   */
+  public void setBatchId(int batchId) {
+    this.batchId = batchId;
+  }
+
+  /**
+   * Get the batch ID
+   */
+  public int getBatchId() {
+    return batchId;
+  }
+
+  /**
+   * Set the last frame this particle was rendered
+   */
+  public void setLastFrameRendered(long frameNumber) {
+    this.lastFrameRendered = frameNumber;
+  }
+
+  /**
+   * Check if the particle was already rendered in the current frame
+   */
+  public boolean wasRenderedInFrame(long frameNumber) {
+    return lastFrameRendered == frameNumber;
   }
 }

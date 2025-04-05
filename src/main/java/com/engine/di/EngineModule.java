@@ -224,7 +224,7 @@ public abstract class EngineModule {
 
       GameEngine engine = new GameEngine(gameFrame, window, ecs, renderer, cameraSystem, // Pass window here
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
-          config, eventSystem, assetManager, animationSystem,particleSystem);
+          config, eventSystem, assetManager, animationSystem, particleSystem);
 
       // Initialize console right after engine creation
       engine.createConsole();
@@ -257,8 +257,17 @@ public abstract class EngineModule {
     public ParticleSystem provideParticleSystem(ParticleEmitterFactory emitterFactory,
         EventSystem eventSystem,
         RenderSystem renderSystem,
-        CollisionSystem collisionSystem) {
-      return new ParticleSystem(emitterFactory, eventSystem, renderSystem, collisionSystem);
+        CollisionSystem collisionSystem,
+        CameraSystem cameraSystem
+        ) {
+      /*
+       * (ParticleEmitterFactory emitterFactory,
+       * EventSystem eventSystem,
+       * RenderSystem renderSystem,
+       * CameraSystem cameraSystem,
+       * CollisionSystem collisionSystem)
+       */
+      return new ParticleSystem(emitterFactory, eventSystem, renderSystem,cameraSystem, collisionSystem);
     }
   }
 }

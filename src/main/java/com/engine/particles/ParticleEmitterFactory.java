@@ -99,7 +99,7 @@ public class ParticleEmitterFactory {
   public SpriteParticleEmitter createSpriteEmitter(float x, float y, String[] spritePaths) {
     BufferedImage[] sprites = new BufferedImage[spritePaths.length];
     for (int i = 0; i < spritePaths.length; i++) {
-      sprites[i] = assetManager.loadImage("partical_"+i,spritePaths[i]);
+      sprites[i] = assetManager.loadImage("partical_" + i, spritePaths[i]);
     }
     return createSpriteEmitter(x, y, sprites);
   }
@@ -156,16 +156,16 @@ public class ParticleEmitterFactory {
     Map<String, Object> config = new HashMap<>();
     config.put("startColor", new Color(255, 100, 0, 200));
     config.put("endColor", new Color(255, 0, 0, 0));
-    config.put("minSize", 10.0f);
+    config.put("minSize", 4.0f);
     config.put("maxSize", 25.0f);
-    config.put("minSpeed", 30.0f);
+    config.put("minSpeed", 20.0f);
     config.put("maxSpeed", 60.0f);
-    config.put("minLifetime", 0.5f);
+    config.put("minLifetime", 0f);
     config.put("maxLifetime", 1.5f);
     config.put("spreadAngle", Math.PI / 4);
-    config.put("baseAngle", -Math.PI / 2); // Up
+    config.put("baseAngle", Math.PI / 2); // Up
     config.put("emissionRate", 20.0f);
-    config.put("gravity", -20.0f); // Particles rise
+    config.put("gravity", 5.0f); // Particles rise
 
     emitter.configure(config);
     return emitter;
@@ -188,12 +188,12 @@ public class ParticleEmitterFactory {
     config.put("maxSize", 30.0f);
     config.put("minSpeed", 10.0f);
     config.put("maxSpeed", 30.0f);
-    config.put("minLifetime", 2.0f);
+    config.put("minLifetime", 0.0f);
     config.put("maxLifetime", 4.0f);
     config.put("spreadAngle", Math.PI / 3);
-    config.put("baseAngle", -Math.PI / 2); // Up
+    config.put("baseAngle", Math.PI / 2); // Up
     config.put("emissionRate", 5.0f);
-    config.put("gravity", -10.0f); // Particles rise slowly
+    config.put("gravity", 10.0f); // Particles rise slowly
 
     emitter.configure(config);
     return emitter;
@@ -213,9 +213,9 @@ public class ParticleEmitterFactory {
     config.put("startColor", new Color(255, 200, 0, 255));
     config.put("endColor", new Color(255, 0, 0, 0));
     config.put("minSize", 5.0f);
-    config.put("maxSize", 15.0f);
-    config.put("minSpeed", 100.0f);
-    config.put("maxSpeed", 200.0f);
+    config.put("maxSize", 10.0f);
+    config.put("minSpeed", 50.0f);
+    config.put("maxSpeed", 100.0f);
     config.put("minLifetime", 0.5f);
     config.put("maxLifetime", 1.0f);
     config.put("spreadAngle", Math.PI * 2); // 360 degrees
