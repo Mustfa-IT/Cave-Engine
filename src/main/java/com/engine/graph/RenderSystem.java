@@ -5,10 +5,14 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.BasicStroke;
 import java.awt.Toolkit;
+import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferStrategy;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.ArrayDeque;
+import java.util.Deque;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -25,7 +29,6 @@ import com.engine.components.GameObjectComponent;
 import com.engine.core.CameraSystem;
 import com.engine.core.GameFrame;
 import com.engine.editor.Editor;
-import com.engine.editor.EditorElement;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
 import com.engine.physics.BoxCollider;
@@ -52,11 +55,16 @@ public class RenderSystem implements RenderingSystem {
   private OverlayRenderer overlayRenderer;
   private Editor editor;
   private boolean editorActive = false;
-  private List<CustomRenderer> customRenderers = new ArrayList<>();
 
   // Rendering statistics
   private int lastFrameEntityCount = 0;
   private int lastFrameUICount = 0;
+
+  // Performance optimization - Graphics context pool
+  private final Deque<Graphics2D> graphicsPool = new ArrayDeque<>();
+
+  // List of custom renderers
+  private final List<CustomRenderer> customRenderers = new ArrayList<>();
 
   @Inject
   public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem, EventSystem eventSystem) {
@@ -87,28 +95,6 @@ public class RenderSystem implements RenderingSystem {
       editorActive = event.getData("active", false);
       return;
     });
-  }
-
-  /**
-   * Register the editor with the rendering system
-   */
-  public void setEditor(Editor editor) {
-    this.editor = editor;
-    LOGGER.info("Editor registered with RenderSystem");
-  }
-
-  /**
-   * Add a custom renderer to the pipeline
-   */
-  public void addCustomRenderer(CustomRenderer renderer) {
-    customRenderers.add(renderer);
-  }
-
-  /**
-   * Remove a custom renderer from the pipeline
-   */
-  public void removeCustomRenderer(CustomRenderer renderer) {
-    customRenderers.remove(renderer);
   }
 
   /**
@@ -164,10 +150,6 @@ public class RenderSystem implements RenderingSystem {
       if (editorActive && editor != null) {
         renderEditor(g);
       }
-
-      // === RENDER CUSTOM ELEMENTS ===
-      renderCustomElements(g);
-
       // === RENDER OVERLAY ===
       if (overlayRenderer != null) {
         overlayRenderer.renderOverlays(g);
@@ -198,10 +180,17 @@ public class RenderSystem implements RenderingSystem {
     Graphics2D g = cameraSystem.applyActiveCamera((Graphics2D) baseG.create());
 
     try {
+
+      // Clear graphics pool before rendering frame
+      graphicsPool.clear();
+
       // Render game entities in the world
       renderEntities(g);
       renderGameObjects(g);
       renderSprites(g);
+
+      // Render any custom renderers in order of priority
+      renderCustom(g);
 
       // Draw debug visualizations if enabled
       if (debugPhysics || debugColliders) {
@@ -209,6 +198,58 @@ public class RenderSystem implements RenderingSystem {
       }
     } finally {
       g.dispose();
+    }
+  }
+
+  /**
+   * Get a graphics context from pool or create new one
+   */
+  private Graphics2D getGraphics(Graphics2D source) {
+    Graphics2D g = graphicsPool.poll();
+    if (g == null) {
+      g = (Graphics2D) source.create();
+    }
+    return g;
+  }
+
+  /**
+   * Return graphics context to pool for reuse
+   */
+  private void recycleGraphics(Graphics2D g) {
+    if (graphicsPool.size() < 20) { // Limit pool size
+      graphicsPool.offer(g);
+    } else {
+      g.dispose();
+    }
+  }
+
+  /**
+   * Add a custom renderer
+   *
+   * @param renderer The renderer to add
+   */
+  public void addCustomRenderer(CustomRenderer renderer) {
+    customRenderers.add(renderer);
+    customRenderers.sort(Comparator.comparingInt(CustomRenderer::getPriority));
+  }
+
+  /**
+   * Remove a custom renderer
+   *
+   * @param renderer The renderer to remove
+   */
+  public void removeCustomRenderer(CustomRenderer renderer) {
+    customRenderers.remove(renderer);
+  }
+
+  /**
+   * Render all active custom renderers
+   */
+  private void renderCustom(Graphics2D g) {
+    for (CustomRenderer renderer : customRenderers) {
+
+      renderer.render(g);
+
     }
   }
 
@@ -243,20 +284,6 @@ public class RenderSystem implements RenderingSystem {
   private void renderEditor(Graphics2D g) {
     if (editor != null) {
       editor.render(g);
-    }
-  }
-
-  /**
-   * Render any custom renderers that have been registered
-   */
-  private void renderCustomElements(Graphics2D baseG) {
-    for (CustomRenderer renderer : customRenderers) {
-      Graphics2D g = (Graphics2D) baseG.create();
-      try {
-        renderer.render(g);
-      } finally {
-        g.dispose();
-      }
     }
   }
 
@@ -363,7 +390,7 @@ public class RenderSystem implements RenderingSystem {
   }
 
   /**
-   * Renders custom GameObjects
+   * Renders custom GameObjects with culling optimization
    */
   private void renderGameObjects(Graphics2D g) {
     world.findEntitiesWith(Transform.class, GameObjectComponent.class).forEach(result -> {
@@ -375,8 +402,12 @@ public class RenderSystem implements RenderingSystem {
         return;
       }
 
-      // Create a copy of the camera-transformed graphics for this entity
-      Graphics2D entityG = (Graphics2D) g.create();
+      // Reuse graphics context from pool
+      Graphics2D entityG = getGraphics(g);
+
+      // Reset transformation to match the parent graphics context before applying new
+      // transforms
+      entityG.setTransform(g.getTransform());
 
       // Apply entity's local transformations
       entityG.translate(transform.getX(), transform.getY());
@@ -386,7 +417,8 @@ public class RenderSystem implements RenderingSystem {
       // Let the GameObject render itself
       gameObjectComp.getGameObject().render(entityG);
 
-      entityG.dispose();
+      // Return graphics context to pool instead of disposing
+      recycleGraphics(entityG);
     });
   }
 
