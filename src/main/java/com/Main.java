@@ -14,7 +14,7 @@ import com.engine.scene.SimpleScene;
 import com.engine.ui.Button;
 import com.engine.events.GameEvent;
 import com.engine.events.EventTypes;
-import com.engine.editor.EditorExample;
+import com.engine.editor.EditorDefault;
 
 import dev.dominion.ecs.api.Entity;
 
@@ -312,7 +312,7 @@ public class Main {
    * Sets up the editor system
    */
   private static void setupEditorSystem(GameEngine game) {
-    EditorExample.integrateWithGame(game);
+    EditorDefault.integrateWithGame(game);
   }
 
 }

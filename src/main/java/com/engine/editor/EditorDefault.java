@@ -3,7 +3,7 @@ package com.engine.editor;
 import java.awt.event.KeyEvent;
 import com.engine.core.GameEngine;
 
-public class EditorExample {
+public class EditorDefault {
 
   public static void setupEditorSystem(GameEngine game, Editor editor) {
     // Register the editor's input handlers with the input manager
