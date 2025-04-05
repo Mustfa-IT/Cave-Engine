@@ -1,9 +1,9 @@
 package com.engine.editor;
 
 import java.awt.Graphics2D;
+import com.engine.graph.Renderable;
 
-public interface EditorElement {
-  void render(Graphics2D g);
+public interface EditorElement extends Renderable {
 
   void update(double deltaTime);
 

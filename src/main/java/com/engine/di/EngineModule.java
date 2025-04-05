@@ -8,13 +8,13 @@ import java.util.logging.Logger;
 
 import javax.inject.Singleton;
 
-
 import com.engine.core.CameraSystem;
 import com.engine.core.EngineConfig;
 import com.engine.core.GameEngine;
 import com.engine.core.GameFrame;
 import com.engine.core.GameWindow;
 import com.engine.entity.EntityFactory;
+import com.engine.graph.DebugRenderer;
 import com.engine.graph.OverlayRenderer;
 import com.engine.graph.RenderSystem;
 import com.engine.graph.RenderingSystem;
@@ -149,8 +149,9 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public RenderSystem provideRenderSystem(GameFrame window, Dominion ecs, CameraSystem cameraSystem) {
-      return new RenderSystem(window, ecs, cameraSystem);
+    public RenderSystem provideRenderSystem(GameFrame window, Dominion ecs, CameraSystem cameraSystem,
+        EventSystem eventSystem) {
+      return new RenderSystem(window, ecs, cameraSystem, eventSystem, new DebugRenderer(ecs));
     }
 
     @Provides

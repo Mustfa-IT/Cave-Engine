@@ -1,10 +1,8 @@
 package com.engine.ui;
 
-import java.awt.Graphics2D;
+import com.engine.graph.Renderable;
 
-public interface UIElement {
-  void render(Graphics2D g);
-
+public interface UIElement extends Renderable {
   void update(double deltaTime);
 
   boolean contains(float x, float y);
