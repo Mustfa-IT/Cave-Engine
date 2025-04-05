@@ -66,12 +66,17 @@ public class RenderSystem implements RenderingSystem {
   // List of custom renderers
   private final List<CustomRenderer> customRenderers = new ArrayList<>();
 
+  // Optimized debug renderer
+  private final DebugRenderer debugRenderer;
+
   @Inject
-  public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem, EventSystem eventSystem) {
+  public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem,
+      EventSystem eventSystem, DebugRenderer debugRenderer) {
     this.cameraSystem = cameraSystem;
     this.window = window;
     this.world = world;
     this.eventSystem = eventSystem;
+    this.debugRenderer = debugRenderer;
 
     // Subscribe to relevant rendering events
     subscribeToEvents();
@@ -111,6 +116,9 @@ public class RenderSystem implements RenderingSystem {
     this.debugPhysics = showPhysics;
     this.debugColliders = showColliders;
     this.showGrid = showGrid;
+
+    // Update debug renderer settings
+    debugRenderer.setDebugOptions(showPhysics, showColliders);
   }
 
   /**
@@ -192,9 +200,9 @@ public class RenderSystem implements RenderingSystem {
       // Render any custom renderers in order of priority
       renderCustom(g);
 
-      // Draw debug visualizations if enabled
+      // Use optimized debug renderer
       if (debugPhysics || debugColliders) {
-        renderDebugOverlays(g);
+        debugRenderer.render(g);
       }
     } finally {
       g.dispose();
@@ -458,189 +466,4 @@ public class RenderSystem implements RenderingSystem {
       LOGGER.fine("Rendered " + renderedCount + " sprites");
     }
   }
-
-  /**
-   * Render physics and collider debug visualizations
-   */
-  private void renderDebugOverlays(Graphics2D g) {
-    // Physics debug rendering
-    if (debugPhysics) {
-      // Render physics bodies, velocities, etc.
-      world.findEntitiesWith(Transform.class, PhysicsBodyComponent.class).forEach(result -> {
-        Transform transform = result.comp1();
-        PhysicsBodyComponent physics = result.comp2();
-
-        // Skip if no physics body
-        if (physics.getBody() == null)
-          return;
-
-        Graphics2D debugG = (Graphics2D) g.create();
-        debugG.translate(transform.getX(), transform.getY());
-        debugG.rotate(transform.getRotation());
-
-        // Draw velocity vector
-        Vec2 vel = physics.getBody().getLinearVelocity();
-        float speed = vel.length();
-        if (speed > 0.1f) {
-          // Scale velocity for visibility and draw the vector
-          float velocityScale = 0.2f;
-          float velX = vel.x * velocityScale * physics.getWorld().fromPhysicsWorld(1.0f);
-          float velY = vel.y * velocityScale * physics.getWorld().fromPhysicsWorld(1.0f);
-
-          // Draw velocity vector
-          debugG.setColor(new Color(50, 200, 50, 180));
-          debugG.setStroke(new BasicStroke(2.0f));
-          debugG.drawLine(0, 0, (int) velX, (int) velY);
-
-          // Draw arrowhead
-          double angle = Math.atan2(velY, velX);
-          debugG.drawLine((int) velX, (int) velY,
-              (int) (velX - 12 * Math.cos(angle - Math.PI / 6)),
-              (int) (velY - 12 * Math.sin(angle - Math.PI / 6)));
-          debugG.drawLine((int) velX, (int) velY,
-              (int) (velX - 12 * Math.cos(angle + Math.PI / 6)),
-              (int) (velY - 12 * Math.sin(angle + Math.PI / 6)));
-
-          // Show speed value
-          debugG.setFont(new Font("SansSerif", Font.PLAIN, 10));
-          debugG.drawString(String.format("%.1f", speed), (int) velX + 5, (int) velY);
-        }
-        // THIS ADDS TOO MUCH LOAD
-        // // Display body type and sensor status
-        // String bodyTypeText = getBodyTypeDescription(physics.getBody().getType());
-        // String sensorText = physics.isTrigger() ? " [SENSOR]" : "";
-        // debugG.setFont(new Font("SansSerif", Font.PLAIN, 10));
-        // debugG.setColor(Color.WHITE);
-        // debugG.drawString(bodyTypeText + sensorText, -15, -10);
-
-        debugG.dispose();
-      });
-    }
-
-    // Collider debug rendering
-    if (debugColliders) {
-      // Outline all colliders
-      world.findEntitiesWith(Transform.class, PhysicsBodyComponent.class).forEach(result -> {
-        Transform transform = result.comp1();
-        PhysicsBodyComponent physics = result.comp2();
-        if (transform == null || physics == null || physics.getBody() == null)
-          return;
-        // Get a separate graphics context
-        Graphics2D debugG = (Graphics2D) g.create();
-
-        // Choose color based on body properties
-        Color outlineColor;
-        if (physics.isTrigger()) {
-          // Sensors/triggers use a semi-transparent yellow
-          outlineColor = new Color(220, 220, 0, 150);
-        } else {
-          // Choose color based on body type
-          switch (physics.getBody().getType()) {
-            case DYNAMIC:
-              outlineColor = new Color(255, 100, 100, 150); // Red for dynamic
-              break;
-            case KINEMATIC:
-              outlineColor = new Color(100, 100, 255, 150); // Blue for kinematic
-              break;
-            default:
-              outlineColor = new Color(100, 255, 100, 150); // Green for static
-          }
-        }
-        debugG.setColor(outlineColor);
-
-        // Set stroke style - dashed for sensors
-        if (physics.isTrigger()) {
-          float[] dashPattern = { 5.0f, 5.0f };
-          debugG
-              .setStroke(new BasicStroke(1.0f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10.0f, dashPattern, 0.0f));
-        } else {
-          debugG.setStroke(new BasicStroke(1.0f));
-        }
-
-        debugG.translate(transform.getX(), transform.getY());
-        debugG.rotate(transform.getRotation());
-
-        // Draw collider outline based on shape
-        if (physics.getBody() != null) {
-          Entity entity = result.entity();
-
-          // Draw different shapes based on collider type
-          if (entity.has(CircleCollider.class)) {
-            CircleCollider circle = entity.get(CircleCollider.class);
-            float radius = circle.getRadius();
-            debugG.drawOval((int) -radius, (int) -radius, (int) (radius * 2), (int) (radius * 2));
-
-            // Draw radius line to show rotation
-            debugG.drawLine(0, 0, (int) radius, 0);
-          } else if (entity.has(BoxCollider.class)) {
-            BoxCollider box = entity.get(BoxCollider.class);
-            float width = box.getWidth();
-            float height = box.getHeight();
-            debugG.drawRect((int) (-width / 2), (int) (-height / 2), (int) width, (int) height);
-
-            // Draw diagonal to show orientation
-            debugG.drawLine((int) (-width / 2), (int) (-height / 2), (int) (width / 2), (int) (height / 2));
-          } else if (entity.has(PolygonCollider.class)) {
-            PolygonCollider polygon = entity.get(PolygonCollider.class);
-            Vec2[] vertices = polygon.getVertices();
-            if (vertices != null && vertices.length > 0) {
-              int[] xPoints = new int[vertices.length];
-              int[] yPoints = new int[vertices.length];
-
-              for (int i = 0; i < vertices.length; i++) {
-                // Convert physics world coordinates to screen coordinates
-                xPoints[i] = (int) (vertices[i].x * physics.getWorld().fromPhysicsWorld(1.0f));
-                yPoints[i] = (int) (vertices[i].y * physics.getWorld().fromPhysicsWorld(1.0f));
-              }
-
-              debugG.drawPolygon(xPoints, yPoints, vertices.length);
-            }
-          } else {
-            // Simple rectangle representation for debugging
-            if (physics.getShape() != null) {
-              float width = physics.getWidth();
-              float height = physics.getHeight();
-              debugG.drawRect((int) (-width / 2), (int) (-height / 2), (int) width, (int) height);
-            }
-          }
-
-          // Draw center point
-          debugG.fillOval(-3, -3, 6, 6);
-
-          // Draw collision category/mask info if in extended debug mode
-          if (debugPhysics) {
-            // Display collision filtering info
-            // TOO MUCH LOAD
-            // String filterInfo = String.format("C:%04X M:%04X",
-            // physics.getCollisionCategory(),
-            // physics.getCollisionMask());
-            // debugG.setFont(new Font("Monospaced", Font.PLAIN, 10));
-            // debugG.setColor(Color.BLACK);
-            // debugG.drawString(filterInfo, -20, 20);
-          }
-        }
-
-        debugG.dispose();
-      });
-    }
-  }
-
-  // /**
-  // * Get a human-readable description of a Box2D body type
-  // *
-  // * @param bodyType The Box2D body type
-  // * @return A readable string description
-  // */
-  // private String getBodyTypeDescription(BodyType bodyType) {
-  // switch (bodyType) {
-  // case DYNAMIC:
-  // return "Dynamic";
-  // case STATIC:
-  // return "Static";
-  // case KINEMATIC:
-  // return "Kinematic";
-  // default:
-  // return "Unknown";
-  // }
-  // }
 }
