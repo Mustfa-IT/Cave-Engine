@@ -1,7 +1,6 @@
 package com.engine.scene;
 
 import java.awt.Color;
-import java.awt.event.KeyEvent;
 
 import com.engine.entity.EntityFactory;
 

@@ -30,7 +30,7 @@ public class EventSystem {
 
   public EventSystem(EngineConfig config){
     this.config = config;
-    this.debugMode = config.debugEvents();
+    this.debugMode = this.config.debugEvents();
   }
 
   /**
@@ -212,7 +212,6 @@ public class EventSystem {
    * @param defaultValue The default value if key is not found
    * @return The stored value cast to the specified type or the default value
    */
-  @SuppressWarnings("unchecked")
   public <T> T getState(String key, T defaultValue) {
     if (!globalState.containsKey(key))
       return defaultValue;

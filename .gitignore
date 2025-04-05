@@ -12,10 +12,10 @@ buildNumber.properties
 
 # Eclipse m2e generated files
 # Eclipse Core
-.projectل
+.project
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 target/classes/com/Main.class
 
-# Ignore Maven generated sources
+# Temporarily comment out to fix Dagger issues
 target/generated-sources/

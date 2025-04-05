@@ -14,7 +14,6 @@ import com.engine.components.Transform;
 import com.engine.core.EngineConfig;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
-import com.engine.events.GameEvent;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Results.With2;

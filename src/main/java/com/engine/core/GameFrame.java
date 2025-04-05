@@ -5,16 +5,13 @@ import java.awt.Rectangle;
 import java.awt.Robot;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
 import java.awt.event.MouseAdapter;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+
 import java.awt.image.BufferedImage;
-import java.util.concurrent.Callable;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.swing.JFrame;
 
 public class GameFrame extends Canvas {
   private int width, height;
@@ -70,7 +67,6 @@ public class GameFrame extends Canvas {
   public void initialize() {
     setVisible(true);
   }
-
 
   /**
    * Captures the current window content as an image

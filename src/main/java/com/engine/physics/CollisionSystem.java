@@ -30,13 +30,11 @@ import dev.dominion.ecs.api.Entity;
 public class CollisionSystem implements ContactListener {
   private static final Logger LOGGER = Logger.getLogger(CollisionSystem.class.getName());
 
-  private final Dominion ecs;
   private final EventSystem eventSystem;
   private final Map<String, List<Collision>> activeCollisions = new HashMap<>();
 
   @Inject
   public CollisionSystem(Dominion ecs, EventSystem eventSystem) {
-    this.ecs = ecs;
     this.eventSystem = eventSystem;
     LOGGER.info("Collision system initialized");
   }

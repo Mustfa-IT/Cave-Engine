@@ -28,7 +28,6 @@ import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
-import java.util.Properties;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Level;

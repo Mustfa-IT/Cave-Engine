@@ -320,7 +320,6 @@ public class PropertyPanel extends EditorPanel {
           try {
             Object oldValue = property.getValue();
             Object newValue = property.parse(selectedOption);
-            @SuppressWarnings("unchecked")
             Property<Object> typedProperty = (Property<Object>) property;
             typedProperty.setValue(newValue);
             notifyPropertyChanged(dropdownProperty, oldValue, newValue);

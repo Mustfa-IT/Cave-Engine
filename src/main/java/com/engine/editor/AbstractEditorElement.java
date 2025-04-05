@@ -1,7 +1,5 @@
 package com.engine.editor;
 
-import java.awt.Graphics2D;
-
 public abstract class AbstractEditorElement implements EditorElement {
   protected int x, y, width, height;
   protected String name;

@@ -6,10 +6,8 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.inject.Inject;
 import javax.inject.Singleton;
 
-import org.jbox2d.common.Vec2;
 
 import com.engine.core.CameraSystem;
 import com.engine.core.EngineConfig;

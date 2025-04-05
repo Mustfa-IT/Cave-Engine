@@ -245,8 +245,11 @@ public class AssetManager {
    * Asset metadata class
    */
   private class AssetInfo {
+    @SuppressWarnings("unused")
     private final String id;
+    @SuppressWarnings("unused")
     private final AssetType type;
+    @SuppressWarnings("unused")
     private final String path;
 
     public AssetInfo(String id, AssetType type, String path) {

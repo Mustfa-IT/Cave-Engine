@@ -269,6 +269,8 @@ public class EditorPanel extends AbstractEditorElement {
         newHeight = Math.max(minHeight, y + height - mouseY);
         newY = mouseY;
         break;
+      default:
+        break;
     }
 
     // Update panel dimensions

@@ -58,7 +58,6 @@
           <compilerArgs>
             <arg>-Xlint:all,-processing</arg>
             <arg>-Xdiags:verbose</arg>
-            <arg>-XDcompilePolicy=ignore</arg>
           </compilerArgs>
           <annotationProcessorPaths>
             <path>
@@ -67,9 +66,8 @@
               <version>${dagger.version}</version>
             </path>
           </annotationProcessorPaths>
-          <!-- Exclude generated sources from compilation warnings -->
+          <!-- Enable annotation processing -->
           <generatedSourcesDirectory>${project.build.directory}/generated-sources/annotations</generatedSourcesDirectory>
-          <proc>none</proc> <!-- Don't reprocess annotations when compiling generated code -->
         </configuration>
       </plugin>
 
