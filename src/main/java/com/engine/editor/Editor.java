@@ -20,6 +20,8 @@ import javax.inject.Singleton;
 
 import com.engine.core.GameFrame;
 import com.engine.core.GameWindow;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
 import com.engine.input.InputManager;
 import com.engine.input.InputManager.Priority;
 import com.engine.ui.UISystem;
@@ -54,13 +56,16 @@ public class Editor {
   // Theme support
   private EditorTheme currentTheme = EditorTheme.DEFAULT;
 
+  private EventSystem eventSystem;
+
   // Layout management
   private static final String LAYOUTS_DIRECTORY = "editorLayouts/";
 
   @Inject
-  public Editor(GameWindow gameWindow, GameFrame gameFrame) {
+  public Editor(GameWindow gameWindow, GameFrame gameFrame,EventSystem eventSystem) {
     this.gameWindow = gameWindow;
     this.gameFrame = gameFrame;
+    this.eventSystem = eventSystem;
 
     // Create layouts directory if it doesn't exist
     try {
@@ -396,6 +401,10 @@ public class Editor {
     return null;
   }
 
+  /**
+   * Render the editor UI
+   * This is now called by the RenderSystem when the editor is active
+   */
   public void render(Graphics2D g) {
     if (!active)
       return;
@@ -461,6 +470,10 @@ public class Editor {
     if (uiSystem != null) {
       uiSystem.setEditorActive(active);
     }
+
+    // Notify the event system about editor state change
+    eventSystem.fireEvent(EventTypes.EDITOR_STATE_CHANGED,
+        "active", active);
 
     LOGGER.info("Editor active state set to: " + active);
   }

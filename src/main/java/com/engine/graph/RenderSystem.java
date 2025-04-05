@@ -6,13 +6,14 @@ import java.awt.Font;
 import java.awt.BasicStroke;
 import java.awt.Toolkit;
 import java.awt.image.BufferStrategy;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.jbox2d.common.Vec2;
-// import org.jbox2d.dynamics.BodyType;
 
 import com.engine.components.CameraComponent;
 import com.engine.components.PhysicsBodyComponent;
@@ -23,6 +24,10 @@ import com.engine.components.UIComponent;
 import com.engine.components.GameObjectComponent;
 import com.engine.core.CameraSystem;
 import com.engine.core.GameFrame;
+import com.engine.editor.Editor;
+import com.engine.editor.EditorElement;
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
 import com.engine.physics.BoxCollider;
 import com.engine.physics.CircleCollider;
 import com.engine.physics.PolygonCollider;
@@ -35,19 +40,75 @@ public class RenderSystem implements RenderingSystem {
   private final GameFrame window;
   private final Dominion world;
   private final CameraSystem cameraSystem;
+  private final EventSystem eventSystem;
   private static final Logger LOGGER = Logger.getLogger(RenderSystem.class.getName());
 
   // Debug visualization flags
   private boolean debugPhysics = false;
   private boolean debugColliders = false;
   private boolean showGrid = true;
+
+  // Rendering layers and components
   private OverlayRenderer overlayRenderer;
+  private Editor editor;
+  private boolean editorActive = false;
+  private List<CustomRenderer> customRenderers = new ArrayList<>();
+
+  // Rendering statistics
+  private int lastFrameEntityCount = 0;
+  private int lastFrameUICount = 0;
 
   @Inject
-  public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem) {
+  public RenderSystem(GameFrame window, Dominion world, CameraSystem cameraSystem, EventSystem eventSystem) {
     this.cameraSystem = cameraSystem;
     this.window = window;
     this.world = world;
+    this.eventSystem = eventSystem;
+
+    // Subscribe to relevant rendering events
+    subscribeToEvents();
+  }
+
+  /**
+   * Subscribe to events that affect rendering
+   */
+  private void subscribeToEvents() {
+    // Listen for debug visualization changes
+    eventSystem.addEventListener(EventTypes.RENDER_DEBUG_CHANGED, event -> {
+      boolean showPhysics = event.getData("showPhysics", debugPhysics);
+      boolean showColliders = event.getData("showColliders", debugColliders);
+      boolean showWorldGrid = event.getData("showGrid", showGrid);
+      setDebugOptions(showPhysics, showColliders, showWorldGrid);
+      return;
+    });
+
+    // Listen for editor state changes
+    eventSystem.addEventListener(EventTypes.EDITOR_STATE_CHANGED, event -> {
+      editorActive = event.getData("active", false);
+      return;
+    });
+  }
+
+  /**
+   * Register the editor with the rendering system
+   */
+  public void setEditor(Editor editor) {
+    this.editor = editor;
+    LOGGER.info("Editor registered with RenderSystem");
+  }
+
+  /**
+   * Add a custom renderer to the pipeline
+   */
+  public void addCustomRenderer(CustomRenderer renderer) {
+    customRenderers.add(renderer);
+  }
+
+  /**
+   * Remove a custom renderer from the pipeline
+   */
+  public void removeCustomRenderer(CustomRenderer renderer) {
+    customRenderers.remove(renderer);
   }
 
   /**
@@ -59,10 +120,6 @@ public class RenderSystem implements RenderingSystem {
 
   /**
    * Configure debug visualization options
-   *
-   * @param showPhysics   Show physics debug info
-   * @param showColliders Show collider outlines
-   * @param showGrid      Show world grid
    */
   public void setDebugOptions(boolean showPhysics, boolean showColliders, boolean showGrid) {
     this.debugPhysics = showPhysics;
@@ -71,77 +128,136 @@ public class RenderSystem implements RenderingSystem {
   }
 
   /**
-   * Renders all registered renderable objects.
+   * Main render method - orchestrates the entire rendering pipeline
    */
+  @Override
   public void render() {
-    // Create the buffer strategy lazily on first render
+    // Create buffer strategy if needed
     if (window.getBufferStrategy() == null) {
       try {
         window.createBufferStrategy(2);
         return; // Skip this frame, buffer strategy will be ready next time
       } catch (IllegalStateException e) {
-        LOGGER.warning("Failed to create buffer strategy, component may not be showing yet: " + e.getMessage());
+        LOGGER.warning("Failed to create buffer strategy: " + e.getMessage());
         return;
       }
     }
 
     BufferStrategy bs = window.getBufferStrategy();
-    if (bs == null) {
+    if (bs == null)
       return;
-    }
 
-    // Get base graphics context for the frame
+    // Main graphics context for the frame
     Graphics2D g = (Graphics2D) bs.getDrawGraphics();
-    // Clear the screen
-    g.clearRect(0, 0, window.getWidth(), window.getHeight());
 
+    try {
+      // Clear the screen
+      g.clearRect(0, 0, window.getWidth(), window.getHeight());
+
+      // === RENDER WORLD ===
+      renderWorld(g);
+
+      // === RENDER UI ===
+      renderUI(g);
+
+      // === RENDER EDITOR ===
+      if (editorActive && editor != null) {
+        renderEditor(g);
+      }
+
+      // === RENDER CUSTOM ELEMENTS ===
+      renderCustomElements(g);
+
+      // === RENDER OVERLAY ===
+      if (overlayRenderer != null) {
+        overlayRenderer.renderOverlays(g);
+      }
+
+      // Fire render complete event with stats
+      eventSystem.fireEvent(EventTypes.RENDER_FRAME_COMPLETE,
+          "entityCount", lastFrameEntityCount,
+          "uiCount", lastFrameUICount);
+
+    } finally {
+      g.dispose();
+      bs.show();
+      Toolkit.getDefaultToolkit().sync();
+    }
+  }
+
+  /**
+   * Render the game world (entities, GameObjects, sprites)
+   */
+  private void renderWorld(Graphics2D baseG) {
     // Only draw grid if flag is enabled
     if (showGrid) {
-      drawWorldGrid(g);
+      drawWorldGrid(baseG);
     }
 
-    // Get the camera-transformed graphics context
-    Entity camera = cameraSystem.getActiveCamera();
-    if (camera != null) {
-      Transform camTransform = camera.get(Transform.class);
-      CameraComponent camComponent = camera.get(CameraComponent.class);
+    // Apply camera transformation for world rendering
+    Graphics2D g = cameraSystem.applyActiveCamera((Graphics2D) baseG.create());
 
-      if (camTransform != null && camComponent != null) {
-        // Log camera position for debugging
-        LOGGER.fine("Rendering with camera at: " + camTransform.getX() + ", " + camTransform.getY() +
-            " zoom: " + camComponent.getZoom());
+    try {
+      // Render game entities in the world
+      renderEntities(g);
+      renderGameObjects(g);
+      renderSprites(g);
+
+      // Draw debug visualizations if enabled
+      if (debugPhysics || debugColliders) {
+        renderDebugOverlays(g);
+      }
+    } finally {
+      g.dispose();
+    }
+  }
+
+  /**
+   * Render UI elements
+   */
+  private void renderUI(Graphics2D baseG) {
+    // Create a separate graphics context for UI (not affected by camera)
+    Graphics2D g = (Graphics2D) baseG.create();
+
+    try {
+      int uiCount = 0;
+
+      // Render all UI components
+      for (var result : world.findEntitiesWith(UIComponent.class)) {
+        UIComponent com = result.comp();
+        if (com.isVisible()) {
+          com.render(g);
+          uiCount++;
+        }
+      }
+
+      lastFrameUICount = uiCount;
+    } finally {
+      g.dispose();
+    }
+  }
+
+  /**
+   * Render the editor UI
+   */
+  private void renderEditor(Graphics2D g) {
+    if (editor != null) {
+      editor.render(g);
+    }
+  }
+
+  /**
+   * Render any custom renderers that have been registered
+   */
+  private void renderCustomElements(Graphics2D baseG) {
+    for (CustomRenderer renderer : customRenderers) {
+      Graphics2D g = (Graphics2D) baseG.create();
+      try {
+        renderer.render(g);
+      } finally {
+        g.dispose();
       }
     }
-
-    // Apply camera transformation and render entities
-    Graphics2D cameraTranformedG = cameraSystem.applyActiveCamera((Graphics2D) g.create());
-
-    // Render all entity types
-    renderEntities(cameraTranformedG);
-    renderGameObjects(cameraTranformedG);
-    renderSprites(cameraTranformedG);
-
-    // Draw debug visualizations if enabled
-    if (debugPhysics || debugColliders) {
-      renderDebugOverlays(cameraTranformedG);
-    }
-
-    cameraTranformedG.dispose();
-
-    // Create a separate graphics context for UI (not affected by camera)
-    Graphics2D uiG = (Graphics2D) g.create();
-    renderUI(uiG);
-    uiG.dispose();
-
-    // Render console and other overlays via the interface
-    if (overlayRenderer != null) {
-      overlayRenderer.renderOverlays(g);
-    }
-
-    // Clean up and display
-    g.dispose();
-    bs.show();
-    Toolkit.getDefaultToolkit().sync();
   }
 
   /**
@@ -214,22 +330,12 @@ public class RenderSystem implements RenderingSystem {
   }
 
   /**
-   * Render UI Elements
-   */
-  private void renderUI(Graphics2D g) {
-    world.findEntitiesWith(UIComponent.class).forEach((c) -> {
-      UIComponent com = c.comp();
-      if (com.isVisible()) {
-        com.render(g);
-      }
-    });
-  }
-
-  /**
    * Renders entities using the camera-transformed graphics context
    */
   private void renderEntities(Graphics2D g) {
-    world.findEntitiesWith(Transform.class, RenderableComponent.class).forEach(result -> {
+    int entityCount = 0;
+
+    for (var result : world.findEntitiesWith(Transform.class, RenderableComponent.class)) {
       Transform transform = result.comp1();
       RenderableComponent renderable = result.comp2();
 
@@ -238,17 +344,22 @@ public class RenderSystem implements RenderingSystem {
         // Create a copy of the camera-transformed graphics for this entity
         Graphics2D entityG = (Graphics2D) g.create();
 
-        // Apply entity's local transformations
-        entityG.translate(transform.getX(), transform.getY());
-        entityG.rotate(transform.getRotation());
-        entityG.scale(transform.getScaleX(), transform.getScaleY());
+        try {
+          // Apply entity's local transformations
+          entityG.translate(transform.getX(), transform.getY());
+          entityG.rotate(transform.getRotation());
+          entityG.scale(transform.getScaleX(), transform.getScaleY());
 
-        // Render the entity with the combined transformations (camera + entity)
-        renderable.render(entityG);
-
-        entityG.dispose();
+          // Render the entity with the combined transformations
+          renderable.render(entityG);
+          entityCount++;
+        } finally {
+          entityG.dispose();
+        }
       }
-    });
+    }
+
+    lastFrameEntityCount += entityCount;
   }
 
   /**
@@ -483,21 +594,21 @@ public class RenderSystem implements RenderingSystem {
   }
 
   // /**
-  //  * Get a human-readable description of a Box2D body type
-  //  *
-  //  * @param bodyType The Box2D body type
-  //  * @return A readable string description
-  //  */
+  // * Get a human-readable description of a Box2D body type
+  // *
+  // * @param bodyType The Box2D body type
+  // * @return A readable string description
+  // */
   // private String getBodyTypeDescription(BodyType bodyType) {
-  //   switch (bodyType) {
-  //     case DYNAMIC:
-  //       return "Dynamic";
-  //     case STATIC:
-  //       return "Static";
-  //     case KINEMATIC:
-  //       return "Kinematic";
-  //     default:
-  //       return "Unknown";
-  //   }
+  // switch (bodyType) {
+  // case DYNAMIC:
+  // return "Dynamic";
+  // case STATIC:
+  // return "Static";
+  // case KINEMATIC:
+  // return "Kinematic";
+  // default:
+  // return "Unknown";
+  // }
   // }
 }

@@ -149,8 +149,8 @@ public abstract class EngineModule {
 
     @Provides
     @Singleton
-    public RenderSystem provideRenderSystem(GameFrame window, Dominion ecs, CameraSystem cameraSystem) {
-      return new RenderSystem(window, ecs, cameraSystem);
+    public RenderSystem provideRenderSystem(GameFrame window, Dominion ecs, CameraSystem cameraSystem,EventSystem eventSystem) {
+      return new RenderSystem(window, ecs, cameraSystem,eventSystem);
     }
 
     @Provides
