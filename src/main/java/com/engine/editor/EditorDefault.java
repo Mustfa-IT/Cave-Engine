@@ -1,6 +1,7 @@
 package com.engine.editor;
 
 import java.awt.event.KeyEvent;
+import java.awt.Color;
 import com.engine.core.GameEngine;
 
 public class EditorDefault {
@@ -140,17 +141,64 @@ public class EditorDefault {
       return false;
     });
 
-    // Create property panel with editable properties
-    PropertyPanel propertiesPanel = new PropertyPanel(10, 10, 200, 300, "Properties");
+    // Create an enhanced property panel with grouped properties and different
+    // property types
+    PropertyPanel propertiesPanel = new PropertyPanel(10, 10, 250, 400, "Properties");
+
+    // Create property groups
+    propertiesPanel.createGroup("Transform", true);
+    propertiesPanel.createGroup("Appearance", true);
+    propertiesPanel.createGroup("Physics", false); // Collapsed by default
+
+    // Add transform properties
     propertiesPanel.setProperty("Position X", 100);
     propertiesPanel.setProperty("Position Y", 100);
     propertiesPanel.setProperty("Rotation", 45.0f);
     propertiesPanel.setProperty("Scale", 1.0f);
+    propertiesPanel.setPropertyTooltip("Scale", "Object scale factor (1.0 = original size)");
+
+    // Add appearance properties
+    propertiesPanel.setProperty("Color", Color.BLUE);
+    propertiesPanel.setProperty("Visible", true);
+    propertiesPanel.setDropdownProperty("Style", "Normal", new String[] { "Normal", "Wireframe", "Textured" });
+    propertiesPanel.setPropertyTooltip("Style", "Visual rendering style");
+
+    // Add physics properties
+    propertiesPanel.setProperty("Mass", 10.0f);
+    propertiesPanel.setProperty("Friction", 0.5f);
+    propertiesPanel.setProperty("Restitution", 0.3f);
+    propertiesPanel.setProperty("Is Static", false);
+    propertiesPanel.setPropertyTooltip("Restitution", "Bounciness factor (0-1)");
+
+    // Organize properties into groups
+    propertiesPanel.addPropertyToGroup("Transform", "Position X");
+    propertiesPanel.addPropertyToGroup("Transform", "Position Y");
+    propertiesPanel.addPropertyToGroup("Transform", "Rotation");
+    propertiesPanel.addPropertyToGroup("Transform", "Scale");
+
+    propertiesPanel.addPropertyToGroup("Appearance", "Color");
+    propertiesPanel.addPropertyToGroup("Appearance", "Visible");
+    propertiesPanel.addPropertyToGroup("Appearance", "Style");
+
+    propertiesPanel.addPropertyToGroup("Physics", "Mass");
+    propertiesPanel.addPropertyToGroup("Physics", "Friction");
+    propertiesPanel.addPropertyToGroup("Physics", "Restitution");
+    propertiesPanel.addPropertyToGroup("Physics", "Is Static");
 
     // Add property change listeners
     propertiesPanel.setPropertyChangeListener("Position X", (name, oldVal, newVal) -> {
       System.out.println("Position X changed: " + oldVal + " -> " + newVal);
       // Here you could update the selected object's position
+    });
+
+    propertiesPanel.setPropertyChangeListener("Color", (name, oldVal, newVal) -> {
+      System.out.println("Color changed to: " + newVal);
+      // Update the selected object's color
+    });
+
+    propertiesPanel.setPropertyChangeListener("Is Static", (name, oldVal, newVal) -> {
+      System.out.println("Static property changed: " + oldVal + " -> " + newVal);
+      // Update physics body type
     });
 
     // Set up keyboard input for property editing

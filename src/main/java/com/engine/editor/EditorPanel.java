@@ -136,8 +136,10 @@ public class EditorPanel extends AbstractEditorElement {
    * Adds a child element to this panel
    */
   public void addChild(EditorElement element) {
-    // Adjust the element's position to be relative to panel
+    // Adjust the element's position to be relative to panel's content area
     element.setPosition(element.getX() + x, element.getY() + y + headerHeight);
+    // Set this panel as the parent
+    element.setParent(this);
     children.add(element);
   }
 
@@ -145,7 +147,9 @@ public class EditorPanel extends AbstractEditorElement {
    * Removes a child element from this panel
    */
   public void removeChild(EditorElement element) {
-    children.remove(element);
+    if (children.remove(element)) {
+      element.setParent(null);
+    }
   }
 
   /**

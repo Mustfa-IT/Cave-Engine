@@ -6,6 +6,7 @@ public abstract class AbstractEditorElement implements EditorElement {
   protected int x, y, width, height;
   protected String name;
   protected boolean draggable = true;
+  protected EditorElement parent = null;
 
   public AbstractEditorElement(int x, int y, int width, int height, String name) {
     this.x = x;
@@ -70,5 +71,15 @@ public abstract class AbstractEditorElement implements EditorElement {
   @Override
   public void update(double deltaTime) {
     // Default implementation does nothing
+  }
+
+  @Override
+  public EditorElement getParent() {
+    return parent;
+  }
+
+  @Override
+  public void setParent(EditorElement parent) {
+    this.parent = parent;
   }
 }

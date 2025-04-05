@@ -293,6 +293,17 @@ public class Editor {
   }
 
   private boolean handleMouseMoved(MouseEvent e) {
+    // First check if any PropertyPanel is showing a dropdown or needs tooltip
+    // update
+    for (EditorElement element : elements) {
+      if (element instanceof PropertyPanel) {
+        PropertyPanel propPanel = (PropertyPanel) element;
+        if (propPanel.handleMouseMove(e.getX(), e.getY())) {
+          return true;
+        }
+      }
+    }
+
     // Check if we're over any panel's resize area
     EditorPanel resizePanel = findPanelForResize(e.getX(), e.getY(), elements);
     if (resizePanel != null) {

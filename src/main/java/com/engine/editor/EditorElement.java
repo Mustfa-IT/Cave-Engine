@@ -26,4 +26,9 @@ public interface EditorElement {
   boolean isDraggable();
 
   void setDraggable(boolean draggable);
+
+  // Add parent reference support
+  EditorElement getParent();
+
+  void setParent(EditorElement parent);
 }
