@@ -10,6 +10,7 @@ import java.util.function.Consumer;
 import com.engine.components.Transform;
 import com.engine.components.UIComponent;
 import com.engine.core.GameFrame;
+import com.engine.editor.Editor;
 import com.engine.entity.EntityRegistrar;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
@@ -52,6 +53,10 @@ public class UISystem {
   private InputManager inputManager;
   private boolean initialized = false;
 
+  // Editor integration
+  private Editor editor;
+  private boolean editorActive = false;
+
   @Inject
   public UISystem(GameFrame window, Dominion ecs, EventSystem eventSystem) {
     this.window = window;
@@ -59,6 +64,24 @@ public class UISystem {
     this.eventSystem = eventSystem;
     // We no longer set up event handling here - it will be done when
     // registerWithInputManager is called
+  }
+
+  /**
+   * Set the editor reference for integration
+   */
+  public void setEditor(Editor editor) {
+    this.editor = editor;
+    if (editor != null) {
+      editor.setUISystem(this);
+      LOGGER.info("UISystem integrated with Editor");
+    }
+  }
+
+  /**
+   * Update UI system with editor state
+   */
+  public void setEditorActive(boolean active) {
+    this.editorActive = active;
   }
 
   /**
@@ -85,6 +108,11 @@ public class UISystem {
    * Central handler for all mouse events
    */
   private boolean handleMouseEvent(MouseEvent e) {
+    // Skip if editor is active and not allowing UI interaction
+    if (editorActive && editor != null && !editor.isUIInteractionAllowed()) {
+      return false;
+    }
+
     int x = e.getX();
     int y = e.getY();
 
@@ -118,7 +146,6 @@ public class UISystem {
       LOGGER.warning("Attempted to register null entity with registrar");
       return null;
     }
-
     if (currentRegistrar != null) {
       try {
         Entity registered = currentRegistrar.registerEntity(entity);
@@ -221,7 +248,7 @@ public class UISystem {
     if (sliderEntity == null)
       return;
     UIComponent uiComp = sliderEntity.get(UIComponent.class);
-    if (uiComp != null)
+    if (uiComp == null)
       throw new NullPointerException("UIComponent for the Slider can't be found ");
 
     Slider slider = (Slider) uiComp.getUi();
@@ -233,7 +260,7 @@ public class UISystem {
     if (sliderEntity == null)
       return;
     UIComponent uiComp = sliderEntity.get(UIComponent.class);
-    if (uiComp != null)
+    if (uiComp == null)
       throw new NullPointerException("UIComponent for the Slider can't be found ");
     Slider slider = (Slider) uiComp.getUi();
     slider.removeSliderCallBack(callBack);

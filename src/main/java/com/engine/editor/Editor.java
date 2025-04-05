@@ -22,6 +22,8 @@ import com.engine.core.GameFrame;
 import com.engine.core.GameWindow;
 import com.engine.input.InputManager;
 import com.engine.input.InputManager.Priority;
+import com.engine.ui.UISystem;
+import dev.dominion.ecs.api.Entity;
 
 @Singleton
 public class Editor {
@@ -30,6 +32,10 @@ public class Editor {
   private final List<EditorElement> elements = new ArrayList<>();
   private final GameWindow gameWindow;
   private final GameFrame gameFrame;
+
+  // UI System integration
+  private UISystem uiSystem;
+  private boolean allowUIInteraction = true;
 
   private boolean active = false;
   private EditorElement draggedElement = null;
@@ -64,6 +70,28 @@ public class Editor {
     }
 
     LOGGER.info("Editor initialized");
+  }
+
+  /**
+   * Set the UI system to integrate with the editor
+   */
+  public void setUISystem(UISystem uiSystem) {
+    this.uiSystem = uiSystem;
+    LOGGER.info("Editor integrated with UISystem");
+  }
+
+  /**
+   * Set whether UI interactions are allowed when editor is active
+   */
+  public void setAllowUIInteraction(boolean allow) {
+    this.allowUIInteraction = allow;
+  }
+
+  /**
+   * Get whether UI interactions are allowed when editor is active
+   */
+  public boolean isUIInteractionAllowed() {
+    return allowUIInteraction;
   }
 
   // This method needs to be called from GameEngine after InputManager is
@@ -227,6 +255,12 @@ public class Editor {
       frameDragStartX = e.getXOnScreen();
       frameDragStartY = e.getYOnScreen();
       return true;
+    }
+
+    // If we allow UI interaction and we didn't handle the event,
+    // let the UI system try to handle it
+    if (allowUIInteraction && uiSystem != null) {
+      return false; // Return false to allow event to propagate to UISystem
     }
 
     return false;
@@ -422,6 +456,12 @@ public class Editor {
 
   public void setActive(boolean active) {
     this.active = active;
+
+    // Notify UI System of editor state change if integration is active
+    if (uiSystem != null) {
+      uiSystem.setEditorActive(active);
+    }
+
     LOGGER.info("Editor active state set to: " + active);
   }
 
@@ -806,5 +846,42 @@ public class Editor {
     panel.setTheme(currentTheme);
     addElement(panel);
     return panel;
+  }
+
+  /**
+   * Create a UI button through the editor
+   */
+  public Entity createButton(String text, int x, int y, int width, int height) {
+    if (uiSystem == null) {
+      LOGGER.warning("Cannot create button: UISystem not set");
+      return null;
+    }
+    Entity button = uiSystem.createButton(text, x, y, width, height);
+    return button;
+  }
+
+  /**
+   * Create a UI label through the editor
+   */
+  public Entity createLabel(String text, int x, int y) {
+    if (uiSystem == null) {
+      LOGGER.warning("Cannot create label: UISystem not set");
+      return null;
+    }
+    Entity label = uiSystem.createLabel(text, x, y);
+    return label;
+  }
+
+  /**
+   * Create a UI slider through the editor
+   */
+  public Entity createSlider(String label, int x, int y, int width, int height,
+      float min, float max, float initial) {
+    if (uiSystem == null) {
+      LOGGER.warning("Cannot create slider: UISystem not set");
+      return null;
+    }
+    Entity slider = uiSystem.createSlider(label, x, y, width, height, min, max, initial);
+    return slider;
   }
 }
