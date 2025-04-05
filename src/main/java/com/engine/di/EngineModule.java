@@ -27,11 +27,15 @@ import com.engine.assets.AssetManager;
 import com.engine.events.EventSystem;
 import com.engine.animation.AnimationSystem;
 import com.engine.editor.EditorModule;
+import com.engine.particles.ParticleEmitterFactory;
+import com.engine.particles.ParticleSystem;
+import com.engine.physics.CollisionSystem;
 
 import dagger.Binds;
 import dagger.Module;
 import dagger.Provides;
 import dev.dominion.ecs.api.Dominion;
+import org.jbox2d.dynamics.World;
 
 @Module(includes = { EditorModule.class })
 public abstract class EngineModule {
@@ -216,16 +220,45 @@ public abstract class EngineModule {
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, EngineConfig config,
         EventSystem eventSystem, AssetManager assetManager,
-        AnimationSystem animationSystem) {
+        AnimationSystem animationSystem, ParticleSystem particleSystem) {
 
       GameEngine engine = new GameEngine(gameFrame, window, ecs, renderer, cameraSystem, // Pass window here
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
-          config, eventSystem, assetManager, animationSystem);
+          config, eventSystem, assetManager, animationSystem,particleSystem);
 
       // Initialize console right after engine creation
       engine.createConsole();
 
       return engine;
+    }
+
+    @Provides
+    @Singleton
+    public CollisionSystem provideCollisionSystem(Dominion dominion, EventSystem eventSystem) {
+      return new CollisionSystem(dominion, eventSystem);
+    }
+
+    @Provides
+    @Singleton
+    public World provideJBox2DWorld(PhysicsWorld physicsWorld) {
+      return physicsWorld;
+    }
+
+    @Provides
+    @Singleton
+    public ParticleEmitterFactory provideParticleEmitterFactory(PhysicsSystem physicsSystem,
+        AssetManager assetManager,
+        World physicsWorld) {
+      return new ParticleEmitterFactory(physicsSystem, assetManager, physicsWorld);
+    }
+
+    @Provides
+    @Singleton
+    public ParticleSystem provideParticleSystem(ParticleEmitterFactory emitterFactory,
+        EventSystem eventSystem,
+        RenderSystem renderSystem,
+        CollisionSystem collisionSystem) {
+      return new ParticleSystem(emitterFactory, eventSystem, renderSystem, collisionSystem);
     }
   }
 }

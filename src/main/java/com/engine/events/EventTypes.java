@@ -61,4 +61,9 @@ public interface EventTypes {
   String ENTITY_DESTROYED = "entity:destroyed";
   String ENTITY_COMPONENT_ADDED = "entity:component:added";
   String ENTITY_COMPONENT_REMOVED = "entity:component:removed";
+
+  // Particle system events
+  String PARTICLE_EMITTER_ADDED = "particles:emitter:added";
+  String PARTICLE_EMITTER_REMOVED = "particles:emitter:removed";
+  String PARTICLE_COUNT_UPDATED = "particles:count:updated";
 }

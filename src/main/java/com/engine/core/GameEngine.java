@@ -18,6 +18,8 @@ import com.engine.events.EventSystem;
 import com.engine.events.GameEvent;
 import com.engine.assets.AssetManager;
 import com.engine.animation.AnimationSystem;
+import com.engine.particles.ParticleSystem;
+import com.engine.particles.ParticleEmitter;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -34,6 +36,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import javax.imageio.ImageIO;
 import javax.inject.Inject;
@@ -87,6 +90,7 @@ public class GameEngine implements OverlayRenderer {
   private final EventSystem eventSystem;
   private final AssetManager assetManager;
   private final AnimationSystem animationSystem;
+  private final ParticleSystem particleSystem;
 
   // List to store additional overlay renderers
   private final List<Consumer<Graphics2D>> overlayRenderers = new ArrayList<>();
@@ -100,7 +104,7 @@ public class GameEngine implements OverlayRenderer {
       EntityFactory entityFactory, UISystem uiSystem,
       InputManager inputManager, EngineConfig config,
       EventSystem eventSystem, AssetManager assetManager,
-      AnimationSystem animationSystem) {
+      AnimationSystem animationSystem, ParticleSystem particleSystem) {
     this.gameFrame = gameFrame;
     this.window = window; // Use the provided window instance
     this.ecs = ecs;
@@ -114,6 +118,7 @@ public class GameEngine implements OverlayRenderer {
     this.eventSystem = eventSystem;
     this.assetManager = assetManager;
     this.animationSystem = animationSystem;
+    this.particleSystem = particleSystem;
     this.debugGrid = this.config.isShowGrid();
     this.debugColliders = this.config.isDebugColliders();
     this.debugPhysics = this.config.isDebugPhysics();
@@ -165,6 +170,8 @@ public class GameEngine implements OverlayRenderer {
       this.scheduler.schedule(() -> cameraSystem.update((float) this.scheduler.deltaTime()));
       this.scheduler.schedule(() -> uiSystem.update(this.scheduler.deltaTime()));
       this.scheduler.schedule(() -> animationSystem.update(this.scheduler.deltaTime()));
+      // Add particle system to the scheduler
+      this.scheduler.schedule(() -> particleSystem.update((float) this.scheduler.deltaTime()));
 
       // Initialize FPS counter
       lastFpsReportTime = System.currentTimeMillis();
@@ -465,6 +472,11 @@ public class GameEngine implements OverlayRenderer {
       // Update physics stats
       debugOverlay.updateStat("Bodies", physicsWorld.getBodyCount());
 
+      // Update particle stats
+      if (particleSystem != null) {
+        debugOverlay.updateStat("Particles", particleSystem.getParticleCount());
+      }
+
       // Update assets count
       debugOverlay.updateStat("Assets", assetManager.getAssetCount());
     }
@@ -749,6 +761,72 @@ public class GameEngine implements OverlayRenderer {
    */
   public AnimationSystem getAnimationSystem() {
     return animationSystem;
+  }
+
+  /**
+   * Get the particle system
+   *
+   * @return The particle system instance
+   */
+  public ParticleSystem getParticleSystem() {
+    return particleSystem;
+  }
+
+  /**
+   * Create a particle effect at the specified position
+   *
+   * @param type The type of effect ("fire", "smoke", "explosion")
+   * @param x    X position
+   * @param y    Y position
+   * @return The created emitter
+   */
+  public ParticleEmitter createParticleEffect(String type, float x, float y) {
+    if (particleSystem == null) {
+      LOGGER.warning("Particle system not initialized");
+      return null;
+    }
+
+    switch (type.toLowerCase()) {
+      case "fire":
+        return particleSystem.createFire(x, y);
+      case "smoke":
+        return particleSystem.createSmoke(x, y);
+      case "explosion":
+        return particleSystem.createExplosion(x, y, 30);
+      default:
+        LOGGER.warning("Unknown particle effect type: " + type);
+        return null;
+    }
+  }
+
+  /**
+   * Create a custom particle emitter with the specified parameters
+   *
+   * @param type   Emitter type ("color", "sprite", "physical")
+   * @param x      X position
+   * @param y      Y position
+   * @param params Configuration parameters
+   * @return The created emitter
+   */
+  public ParticleEmitter createParticleEmitter(String type, float x, float y, Map<String, Object> params) {
+    if (particleSystem == null) {
+      LOGGER.warning("Particle system not initialized");
+      return null;
+    }
+
+    return particleSystem.createEmitter(type, x, y, params);
+  }
+
+  /**
+   * Attach a particle emitter to an entity
+   *
+   * @param emitter The particle emitter
+   * @param entity  The entity to attach to
+   */
+  public void attachParticleEmitterToEntity(ParticleEmitter emitter, Entity entity) {
+    if (particleSystem != null) {
+      particleSystem.attachEmitterToEntity(emitter, entity);
+    }
   }
 
   /**
