@@ -146,6 +146,9 @@ public class GameEngine implements OverlayRenderer {
         cameraSystem.updateAllViewports(width, height);
       });
 
+      // Register UI system with input manager
+      uiSystem.registerWithInputManager(inputManager);
+
       // Register editor with input manager
       if (engineComponent != null && engineComponent.editor() != null) {
         engineComponent.editor().registerInputHandlers(inputManager);
@@ -617,6 +620,7 @@ public class GameEngine implements OverlayRenderer {
     // Fade out (if fadeDurationMs > 0)
     if (fadeDurationMs > 0) {
       // Animation logic would go here
+      // TODO:IMPROVE ON THIS PART
       delay(fadeDurationMs / 2);
     }
 

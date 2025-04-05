@@ -41,6 +41,7 @@ public class UIComponent {
   }
 
   public boolean contains(float x, float y) {
-    return ui != null && ui.contains(x, y);
+    // Only check for containment if the component is visible
+    return visible && ui != null && ui.contains(x, y);
   }
 }

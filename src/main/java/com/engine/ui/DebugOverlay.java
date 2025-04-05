@@ -20,7 +20,7 @@ public class DebugOverlay extends AbstractUIElement {
     addStat("FPS", "0.0");
     addStat("Objects", "0");
     addStat("Memory", "0 MB");
-    addStat("Gravity","0");
+    addStat("Gravity", "0");
   }
 
   @Override
@@ -58,6 +58,22 @@ public class DebugOverlay extends AbstractUIElement {
       g.drawString(stat.value, (int) x + 100, (int) y + yOffset);
       yOffset += 20;
     }
+  }
+
+  @Override
+  public boolean contains(float x, float y) {
+    // Don't catch mouse events if not visible
+    if (!visible) {
+      return false;
+    }
+
+    // Only capture mouse events in the header area (first 25px) when visible
+    // This ensures the overlay doesn't block interactions with elements behind it
+    if (y > this.y + 25) {
+      return false;
+    }
+
+    return super.contains(x, y);
   }
 
   public void addStat(String name, String value) {

@@ -42,14 +42,39 @@ public class InputManager {
   private final Map<Integer, Function<MouseEvent, Boolean>> mouseButtonCallbacks = new HashMap<>();
   private Consumer<Point> mouseMoveCallback = null;
 
-  // Custom key handlers
+  // Custom key handlers - divide listeners by priority
   private final List<Function<KeyEvent, Boolean>> keyListeners = new ArrayList<>();
   private final List<Function<KeyEvent, Boolean>> keyTypedListeners = new ArrayList<>();
-  private final List<Function<MouseEvent, Boolean>> mouseListeners = new ArrayList<>();
+
+  // Store mouse listeners in priority buckets (High, Normal, Low)
+  private final Map<Priority, List<Function<MouseEvent, Boolean>>> mouseListenersByPriority = new HashMap<>();
+
+  // Priority enum for mouse event handling
+  public enum Priority {
+    HIGH(0),
+    NORMAL(1),
+    LOW(2);
+
+    private final int value;
+
+    Priority(int value) {
+      this.value = value;
+    }
+
+    public int getValue() {
+      return value;
+    }
+  }
 
   public InputManager(GameFrame window, CameraSystem cameraSystem) {
     this.window = window;
     this.cameraSystem = cameraSystem;
+
+    // Initialize priority buckets
+    for (Priority priority : Priority.values()) {
+      mouseListenersByPriority.put(priority, new ArrayList<>());
+    }
+
     setupListeners();
   }
 
@@ -109,7 +134,10 @@ public class InputManager {
       public void mouseMoved(MouseEvent e) {
         mouseScreenPosition.setLocation(e.getX(), e.getY());
 
-        if (mouseMoveCallback != null) {
+        // Process through all priority levels (HIGH to LOW)
+        boolean consumed = processMouseEventByPriority(e);
+
+        if (!consumed && mouseMoveCallback != null) {
           mouseMoveCallback.accept(mouseScreenPosition);
         }
       }
@@ -118,11 +146,10 @@ public class InputManager {
       public void mouseDragged(MouseEvent e) {
         mouseScreenPosition.setLocation(e.getX(), e.getY());
 
-        if (processMouseEvent(e, mouseListeners)) {
-          return;
-        }
+        // Process through all priority levels (HIGH to LOW)
+        boolean consumed = processMouseEventByPriority(e);
 
-        if (mouseMoveCallback != null) {
+        if (!consumed && mouseMoveCallback != null) {
           mouseMoveCallback.accept(mouseScreenPosition);
         }
       }
@@ -132,35 +159,35 @@ public class InputManager {
     MouseAdapter mouseAdapter = new MouseAdapter() {
       @Override
       public void mousePressed(MouseEvent e) {
-        // Process through registered mouse listeners first
-        if (processMouseEvent(e, mouseListeners)) {
-          return;
-        }
+        // Process through all priority levels (HIGH to LOW)
+        boolean consumed = processMouseEventByPriority(e);
 
-        int button = e.getButton();
-        mouseButtonStates.put(button, true);
+        if (!consumed) {
+          int button = e.getButton();
+          mouseButtonStates.put(button, true);
 
-        if (mouseButtonCallbacks.containsKey(button)) {
-          Function<MouseEvent, Boolean> callback = mouseButtonCallbacks.get(button);
-          callback.apply(e);
+          if (mouseButtonCallbacks.containsKey(button)) {
+            Function<MouseEvent, Boolean> callback = mouseButtonCallbacks.get(button);
+            callback.apply(e);
+          }
         }
       }
 
       @Override
       public void mouseReleased(MouseEvent e) {
-        // Process through registered mouse listeners first
-        if (processMouseEvent(e, mouseListeners)) {
-          return;
-        }
+        // Process through all priority levels (HIGH to LOW)
+        boolean consumed = processMouseEventByPriority(e);
 
-        int button = e.getButton();
-        mouseButtonStates.put(button, false);
+        if (!consumed) {
+          int button = e.getButton();
+          mouseButtonStates.put(button, false);
+        }
       }
 
       @Override
       public void mouseClicked(MouseEvent e) {
-        // Handle mouse clicks separately since they occur after press/release
-        processMouseEvent(e, mouseListeners);
+        // Process through registered mouse listeners respecting priority levels
+        processMouseEventByPriority(e);
       }
     };
 
@@ -170,6 +197,23 @@ public class InputManager {
     window.addMouseListener(mouseAdapter);
 
     LOGGER.info("Input manager initialized");
+  }
+
+  /**
+   * Process mouse events through all priority levels
+   *
+   * @param e MouseEvent to process
+   * @return true if the event was consumed by any listener
+   */
+  private boolean processMouseEventByPriority(MouseEvent e) {
+    // Process listeners in priority order (HIGH to LOW)
+    for (Priority priority : Priority.values()) {
+      if (processMouseEvent(e, mouseListenersByPriority.get(priority))) {
+        LOGGER.finest("Event consumed by priority level: " + priority);
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -314,20 +358,15 @@ public class InputManager {
   }
 
   /**
-   * Add a general mouse event listener with specific priority (higher priority
-   * listeners get called first)
+   * Add a general mouse event listener with specific priority
    *
    * @param listener The listener that returns true if it consumed the event
-   * @param priority Higher numbers mean higher priority
+   * @param priority Priority level (HIGH, NORMAL, LOW)
    */
-  public void addMouseListener(Function<MouseEvent, Boolean> listener, int priority) {
+  public void addMouseListener(Function<MouseEvent, Boolean> listener, Priority priority) {
     if (listener != null) {
-      // Insert based on priority - prepend for higher priority
-      if (priority > 0 && !mouseListeners.isEmpty()) {
-        mouseListeners.add(0, listener);
-      } else {
-        mouseListeners.add(listener);
-      }
+      mouseListenersByPriority.get(priority).add(listener);
+      LOGGER.info("Added mouse listener with priority " + priority);
     }
   }
 
@@ -335,6 +374,18 @@ public class InputManager {
    * Add a mouse listener with normal priority
    */
   public void addMouseListener(Function<MouseEvent, Boolean> listener) {
-    addMouseListener(listener, 0);
+    addMouseListener(listener, Priority.NORMAL);
+  }
+
+  /**
+   * Add a mouse listener with high priority (legacy support)
+   */
+  public void addMouseListener(Function<MouseEvent, Boolean> listener, int priority) {
+    // Convert old-style priority (higher numbers) to new enum
+    if (priority > 0) {
+      addMouseListener(listener, Priority.HIGH);
+    } else {
+      addMouseListener(listener, Priority.NORMAL);
+    }
   }
 }

@@ -1,6 +1,7 @@
 package com.engine.scene;
 
 import java.awt.Color;
+import java.awt.event.KeyEvent;
 
 import com.engine.entity.EntityFactory;
 
@@ -16,14 +17,12 @@ public class SimpleScene extends Scene {
 
   @Override
   public void update(double deltaTime) {
-
   }
 
   @Override
   public void initialize() {
     System.out.println("TestScene 1 activated");
     startTime = System.currentTimeMillis();
-
     // In our new coordinate system (Y+ is up), create ground near the bottom
     entityFactory.createGround(0, -300, 1800, 20, Color.GRAY);
     for (int i = 0; i < 30; i++) {

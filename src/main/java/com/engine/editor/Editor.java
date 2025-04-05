@@ -1,12 +1,9 @@
 package com.engine.editor;
 
 import java.awt.Graphics2D;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.event.MouseMotionAdapter;
 import java.awt.Cursor;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.HashMap;
@@ -24,6 +21,7 @@ import javax.inject.Singleton;
 import com.engine.core.GameFrame;
 import com.engine.core.GameWindow;
 import com.engine.input.InputManager;
+import com.engine.input.InputManager.Priority;
 
 @Singleton
 public class Editor {
@@ -57,7 +55,6 @@ public class Editor {
   public Editor(GameWindow gameWindow, GameFrame gameFrame) {
     this.gameWindow = gameWindow;
     this.gameFrame = gameFrame;
-    setupEventHandlers();
 
     // Create layouts directory if it doesn't exist
     try {
@@ -72,8 +69,8 @@ public class Editor {
   // This method needs to be called from GameEngine after InputManager is
   // initialized
   public void registerInputHandlers(InputManager inputManager) {
-    // Register mouse handlers with higher priority (1) than the default ones (0)
-    inputManager.addMouseListener(this::handleMouseEvent, 1);
+    // Register mouse handlers with proper priority for editor
+    inputManager.addMouseListener(this::handleMouseEvent, Priority.HIGH);
     LOGGER.info("Editor input handlers registered with high priority");
   }
 
@@ -81,7 +78,7 @@ public class Editor {
   private boolean handleMouseEvent(MouseEvent e) {
     // Only handle events if editor is active
     if (!active) {
-      return false;
+      return false; // Don't consume events when not active
     }
 
     // Process based on event type
@@ -319,16 +316,9 @@ public class Editor {
       return true;
     }
 
-    return false;
-  }
-
-  // Remove direct event handlers since we're using InputManager for event
-  // handling
-  private void setupEventHandlers() {
-    // Remove the duplicate event handlers
-    // We're now using the InputManager-based event handling exclusively
-    // through the registerInputHandlers() method
-    LOGGER.info("Using InputManager for event handling instead of direct listeners");
+    // Only consume the event if we're hovering over an editor element
+    EditorElement element = findElementAt(e.getX(), e.getY(), elements);
+    return element != null;
   }
 
   /**

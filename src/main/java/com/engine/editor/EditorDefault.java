@@ -29,8 +29,11 @@ public class EditorDefault {
       if (editor.isActive()) {
         editor.toggleSnapping();
         return true; // Consume the event
+      } else {
+        // If editor is not active, toggle debug overlay
+        game.toggleDebugOverlay();
+        return true; // Consume the event
       }
-      return false;
     });
 
     game.getInputManager().onKeyPress(KeyEvent.VK_F4, e -> {

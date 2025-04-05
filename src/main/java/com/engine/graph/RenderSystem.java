@@ -12,7 +12,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 import org.jbox2d.common.Vec2;
-import org.jbox2d.dynamics.BodyType;
+// import org.jbox2d.dynamics.BodyType;
 
 import com.engine.components.CameraComponent;
 import com.engine.components.PhysicsBodyComponent;
@@ -48,8 +48,6 @@ public class RenderSystem implements RenderingSystem {
     this.cameraSystem = cameraSystem;
     this.window = window;
     this.world = world;
-    // Window is already initialized and visible at this point
-    // Don't create buffer strategy in constructor
   }
 
   /**
@@ -484,22 +482,22 @@ public class RenderSystem implements RenderingSystem {
     }
   }
 
-  /**
-   * Get a human-readable description of a Box2D body type
-   *
-   * @param bodyType The Box2D body type
-   * @return A readable string description
-   */
-  private String getBodyTypeDescription(BodyType bodyType) {
-    switch (bodyType) {
-      case DYNAMIC:
-        return "Dynamic";
-      case STATIC:
-        return "Static";
-      case KINEMATIC:
-        return "Kinematic";
-      default:
-        return "Unknown";
-    }
-  }
+  // /**
+  //  * Get a human-readable description of a Box2D body type
+  //  *
+  //  * @param bodyType The Box2D body type
+  //  * @return A readable string description
+  //  */
+  // private String getBodyTypeDescription(BodyType bodyType) {
+  //   switch (bodyType) {
+  //     case DYNAMIC:
+  //       return "Dynamic";
+  //     case STATIC:
+  //       return "Static";
+  //     case KINEMATIC:
+  //       return "Kinematic";
+  //     default:
+  //       return "Unknown";
+  //   }
+  // }
 }

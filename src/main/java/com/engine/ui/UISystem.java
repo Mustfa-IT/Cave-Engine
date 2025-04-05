@@ -1,6 +1,5 @@
 package com.engine.ui;
 
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.logging.Logger;
 
@@ -14,6 +13,8 @@ import com.engine.core.GameFrame;
 import com.engine.entity.EntityRegistrar;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
+import com.engine.input.InputManager;
+import com.engine.input.InputManager.Priority;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -48,13 +49,58 @@ public class UISystem {
   private UIElement hoveredElement;
   private UIElement focusedElement;
   private UIElement draggedElement;
+  private InputManager inputManager;
+  private boolean initialized = false;
 
   @Inject
   public UISystem(GameFrame window, Dominion ecs, EventSystem eventSystem) {
     this.window = window;
     this.ecs = ecs;
     this.eventSystem = eventSystem;
-    setupEventHandling();
+    // We no longer set up event handling here - it will be done when
+    // registerWithInputManager is called
+  }
+
+  /**
+   * Register this UI system with the input manager for event handling.
+   * This must be called before the UI system will respond to input.
+   */
+  public void registerWithInputManager(InputManager inputManager) {
+    if (initialized) {
+      return;
+    }
+
+    this.inputManager = inputManager;
+
+    // Register mouse event handlers with LOW priority (will run after Editor)
+    // This ensures UI elements only receive events if the Editor doesn't consume
+    // them
+    inputManager.addMouseListener(this::handleMouseEvent, Priority.LOW);
+
+    initialized = true;
+    LOGGER.info("UISystem registered with InputManager");
+  }
+
+  /**
+   * Central handler for all mouse events
+   */
+  private boolean handleMouseEvent(MouseEvent e) {
+    int x = e.getX();
+    int y = e.getY();
+
+    switch (e.getID()) {
+      case MouseEvent.MOUSE_CLICKED:
+        return handleMouseClick(x, y);
+      case MouseEvent.MOUSE_PRESSED:
+        return handleMousePress(x, y);
+      case MouseEvent.MOUSE_RELEASED:
+        return handleMouseRelease(x, y);
+      case MouseEvent.MOUSE_MOVED:
+        return handleMouseMove(x, y);
+      case MouseEvent.MOUSE_DRAGGED:
+        return handleMouseDrag(x, y);
+    }
+    return false;
   }
 
   /**
@@ -62,38 +108,6 @@ public class UISystem {
    */
   public void setCurrentRegistrar(EntityRegistrar registrar) {
     this.currentRegistrar = registrar;
-  }
-
-  private void setupEventHandling() {
-    MouseAdapter mouseAdapter = new MouseAdapter() {
-      @Override
-      public void mouseClicked(MouseEvent e) {
-        handleMouseClick(e.getX(), e.getY());
-      }
-
-      @Override
-      public void mouseMoved(MouseEvent e) {
-        handleMouseMove(e.getX(), e.getY());
-      }
-
-      @Override
-      public void mousePressed(MouseEvent e) {
-        handleMousePress(e.getX(), e.getY());
-      }
-
-      @Override
-      public void mouseReleased(MouseEvent e) {
-        handleMouseRelease(e.getX(), e.getY());
-      }
-
-      @Override
-      public void mouseDragged(MouseEvent e) {
-        handleMouseDrag(e.getX(), e.getY());
-      }
-    };
-
-    window.addMouseListener(mouseAdapter);
-    window.addMouseMotionListener(mouseAdapter);
   }
 
   /**
@@ -272,8 +286,8 @@ public class UISystem {
   /**
    * Handle mouse movement to update hover states
    */
-  private void handleMouseMove(int x, int y) {
-    // Reset previous hover state
+  private boolean handleMouseMove(int x, int y) {
+    // Reset previous hover state if needed
     if (hoveredElement instanceof Button) {
       ((Button) hoveredElement).setHovered(false);
 
@@ -287,6 +301,11 @@ public class UISystem {
     // Find element under cursor
     hoveredElement = findElementAt(x, y);
 
+    // If no UI element is under cursor, don't consume the event
+    if (hoveredElement == null) {
+      return false;
+    }
+
     // Update hover state
     if (hoveredElement instanceof Button) {
       ((Button) hoveredElement).setHovered(true);
@@ -297,13 +316,20 @@ public class UISystem {
           "x", x,
           "y", y);
     }
+
+    // Only consume the event if we found an interactive element
+    return (hoveredElement instanceof Button) || (hoveredElement instanceof Slider);
   }
 
   /**
    * Handle mouse click events
    */
-  private void handleMouseClick(int x, int y) {
+  private boolean handleMouseClick(int x, int y) {
     UIElement clickedElement = findElementAt(x, y);
+
+    if (clickedElement == null) {
+      return false;
+    }
 
     if (clickedElement instanceof Button) {
       ((Button) clickedElement).click();
@@ -313,65 +339,89 @@ public class UISystem {
           "element", clickedElement,
           "x", x,
           "y", y);
+
+      focusedElement = clickedElement;
+      return true; // Consume the event
     }
 
     focusedElement = clickedElement;
+    return clickedElement instanceof Slider; // Only consume if it's an interactive element
   }
 
   /**
    * Handle mouse press events
    */
-  private void handleMousePress(int x, int y) {
+  private boolean handleMousePress(int x, int y) {
     UIElement clickedElement = findElementAt(x, y);
+
+    if (clickedElement == null) {
+      return false;
+    }
 
     if (clickedElement instanceof Slider) {
       if (((Slider) clickedElement).startDrag(x, y)) {
         draggedElement = clickedElement;
+        return true; // Consume the event
       }
     }
 
-    // Could be used for drag operations or visual feedback
+    return clickedElement instanceof Slider || clickedElement instanceof Button;
   }
 
   /**
    * Handle mouse release events
    */
-  private void handleMouseRelease(int x, int y) {
+  private boolean handleMouseRelease(int x, int y) {
+    boolean hadDraggedElement = draggedElement != null;
+
     if (draggedElement instanceof Slider) {
       ((Slider) draggedElement).stopDrag();
+      draggedElement = null;
+      return true; // Consume the event
     }
+
     draggedElement = null;
+    return hadDraggedElement;
   }
 
   /**
    * Handle mouse drag events
    */
-  private void handleMouseDrag(int x, int y) {
+  private boolean handleMouseDrag(int x, int y) {
     if (draggedElement instanceof Slider) {
       ((Slider) draggedElement).handleMouseDrag(x, y);
+      return true; // Consume the event
     }
+
+    // If we're not dragging a slider, check if we're hovering over any interactive
+    // element
+    UIElement elementUnderCursor = findElementAt(x, y);
+    return elementUnderCursor instanceof Slider || elementUnderCursor instanceof Button;
   }
 
   /**
    * Find the UI element at the specified screen coordinates
+   * Modified to respect visibility of UI components
    */
   private UIElement findElementAt(int x, int y) {
     UIElement result = null;
 
-    // Instead of looping through a local list, query all entities with UIComponent
-    var entities = ecs.findEntitiesWith(UIComponent.class);
+    // Query all entities with UIComponent - use toArray() for stable enumeration
+    var entities = ecs.findEntitiesWith(UIComponent.class).stream().toList();
 
     // Check each UI component to see if it contains the point
-    for (var entityResult : entities) {
+    // Process in reverse order (last drawn = on top)
+    for (int i = entities.size() - 1; i >= 0; i--) {
+      var entityResult = entities.get(i);
       UIComponent uiComponent = entityResult.comp();
 
+      // Only check visible components
       if (uiComponent != null && uiComponent.isVisible() &&
           uiComponent.contains(x, y)) {
         result = uiComponent.getUi();
         break;
       }
     }
-
     return result;
   }
 

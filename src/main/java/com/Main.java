@@ -120,6 +120,9 @@ public class Main {
       return true; // Consume the event
     });
 
+    // Remove F3 debug overlay toggle - now handled in EditorDefault
+    // (This key will be handled by the editor's F3 handler)
+
     // Debug visualization toggle with D key
     inputManager.onKeyPress(KeyEvent.VK_D, e -> {
       boolean currentDebugState = game.isDebugColliders();
@@ -130,12 +133,6 @@ public class Main {
     // Scene switching
     inputManager.onKeyPress(KeyEvent.VK_1, e -> {
       game.setActiveScene("test");
-      return true; // Consume the event
-    });
-
-    // Debug overlay toggle with F3
-    inputManager.onKeyPress(KeyEvent.VK_F3, e -> {
-      game.toggleDebugOverlay();
       return true; // Consume the event
     });
 
