@@ -86,6 +86,7 @@ public class ParticleEmitterFactory {
    */
   public SpriteParticleEmitter createSpriteEmitter(float x, float y, BufferedImage[] sprites) {
     return new SpriteParticleEmitter(x, y, sprites);
+
   }
 
   /**
@@ -99,8 +100,10 @@ public class ParticleEmitterFactory {
   public SpriteParticleEmitter createSpriteEmitter(float x, float y, String[] spritePaths) {
     BufferedImage[] sprites = new BufferedImage[spritePaths.length];
     for (int i = 0; i < spritePaths.length; i++) {
-      sprites[i] = assetManager.loadImage("partical_" + i, spritePaths[i]);
+      sprites[i] = assetManager.loadImage("particle_" + i, spritePaths[i]);
     }
+
+
     return createSpriteEmitter(x, y, sprites);
   }
 
