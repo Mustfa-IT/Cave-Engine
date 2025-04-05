@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <processorPath useClasspath="false">
+          <entry
+            name="$MAVEN_REPOSITORY$/com/google/dagger/dagger-compiler/2.56.1/dagger-compiler-2.56.1.jar" />
+          <!-- Add other dependencies required by dagger-compiler -->
+        </processorPath>
+        <module name="cave-engine" />
+      </profile>
+    </annotationProcessing>
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="cave-engine" options="-Xlint:all,-processing -Xdiags:verbose" />
+    </option>
+  </component>
+</project>
