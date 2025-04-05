@@ -14,6 +14,7 @@ import com.engine.editor.Editor;
 import com.engine.entity.EntityRegistrar;
 import com.engine.events.EventSystem;
 import com.engine.events.EventTypes;
+import com.engine.events.GameEventListener;
 import com.engine.input.InputManager;
 import com.engine.input.InputManager.Priority;
 
@@ -307,7 +308,37 @@ public class UISystem {
 
     if (panelElement instanceof Panel && childElement != null) {
       ((Panel) panelElement).addElement(childElement);
+
+      // Fire element added event
+      eventSystem.fireEvent(EventTypes.UI_ELEMENT_ADDED,
+          "panel", panelElement,
+          "element", childElement,
+          "panelEntity", panelEntity,
+          "elementEntity", elementEntity);
     }
+  }
+
+  /**
+   * Add a listener for a specific UI event type
+   *
+   * @param eventType The UI event type to listen for (from EventTypes)
+   * @param listener  The listener to be called when event is fired
+   */
+  public void addUIEventListener(String eventType, GameEventListener listener) {
+    if (!eventType.startsWith("ui:")) {
+      LOGGER.warning("Attempted to register non-UI event type: " + eventType);
+      return;
+    }
+    eventSystem.addEventListener(eventType, listener);
+  }
+
+  /**
+   * Add a listener for all UI events using pattern matching
+   *
+   * @param listener The listener to be called when any UI event is fired
+   */
+  public void addAllUIEventsListener(GameEventListener listener) {
+    eventSystem.addPatternListener("ui:*", listener);
   }
 
   /**
@@ -355,7 +386,33 @@ public class UISystem {
     UIElement clickedElement = findElementAt(x, y);
 
     if (clickedElement == null) {
+      // If we had a focused element before, fire a focus lost event
+      if (focusedElement != null) {
+        eventSystem.fireEvent(EventTypes.UI_FOCUS_LOST,
+            "element", focusedElement,
+            "x", x,
+            "y", y);
+        focusedElement = null;
+      }
       return false;
+    }
+
+    // If focusing on a different element than before
+    if (focusedElement != clickedElement) {
+      // Fire focus lost on previous element if it exists
+      if (focusedElement != null) {
+        eventSystem.fireEvent(EventTypes.UI_FOCUS_LOST,
+            "element", focusedElement,
+            "x", x,
+            "y", y);
+      }
+
+      // Set new focus and fire focus gained event
+      focusedElement = clickedElement;
+      eventSystem.fireEvent(EventTypes.UI_FOCUS_GAINED,
+          "element", clickedElement,
+          "x", x,
+          "y", y);
     }
 
     if (clickedElement instanceof Button) {
@@ -367,11 +424,9 @@ public class UISystem {
           "x", x,
           "y", y);
 
-      focusedElement = clickedElement;
       return true; // Consume the event
     }
 
-    focusedElement = clickedElement;
     return clickedElement instanceof Slider; // Only consume if it's an interactive element
   }
 
@@ -388,6 +443,13 @@ public class UISystem {
     if (clickedElement instanceof Slider) {
       if (((Slider) clickedElement).startDrag(x, y)) {
         draggedElement = clickedElement;
+
+        // Fire drag begin event
+        eventSystem.fireEvent(EventTypes.UI_DRAG_BEGIN,
+            "element", clickedElement,
+            "x", x,
+            "y", y);
+
         return true; // Consume the event
       }
     }
@@ -403,6 +465,13 @@ public class UISystem {
 
     if (draggedElement instanceof Slider) {
       ((Slider) draggedElement).stopDrag();
+
+      // Fire drag end event
+      eventSystem.fireEvent(EventTypes.UI_DRAG_END,
+          "element", draggedElement,
+          "x", x,
+          "y", y);
+
       draggedElement = null;
       return true; // Consume the event
     }
@@ -417,6 +486,13 @@ public class UISystem {
   private boolean handleMouseDrag(int x, int y) {
     if (draggedElement instanceof Slider) {
       ((Slider) draggedElement).handleMouseDrag(x, y);
+
+      // Fire drag update event
+      eventSystem.fireEvent(EventTypes.UI_DRAG_UPDATE,
+          "element", draggedElement,
+          "x", x,
+          "y", y);
+
       return true; // Consume the event
     }
 

@@ -35,6 +35,15 @@ public interface EventTypes {
   String UI_HOVER_BEGIN = "ui:hover:begin";
   String UI_HOVER_END = "ui:hover:end";
   String UI_VALUE_CHANGED = "ui:value:changed";
+  String UI_FOCUS_GAINED = "ui:focus:gained";
+  String UI_FOCUS_LOST = "ui:focus:lost";
+  String UI_DRAG_BEGIN = "ui:drag:begin";
+  String UI_DRAG_END = "ui:drag:end";
+  String UI_DRAG_UPDATE = "ui:drag:update";
+  String UI_VISIBILITY_CHANGED = "ui:visibility:changed";
+  String UI_PROPERTY_CHANGED = "ui:property:changed";
+  String UI_ELEMENT_ADDED = "ui:element:added";
+  String UI_ELEMENT_REMOVED = "ui:element:removed";
 
   // Entity events
   String ENTITY_CREATED = "entity:created";
