@@ -11,7 +11,9 @@ import com.engine.core.AbstractGameObject;
 import com.engine.gameobject.GameObject;
 import com.engine.entity.EntityFactory.PhysicsParameters;
 import com.engine.scene.SimpleScene;
+import com.engine.scenes.SimpleScene2;
 import com.engine.ui.Button;
+import com.engine.ui.Slider;
 import com.engine.events.GameEvent;
 import com.engine.events.EventTypes;
 import com.engine.editor.EditorDefault;
@@ -33,7 +35,7 @@ public class Main {
     GameEngine game = GameEngine.createEngine();
 
     // Configure the engine with enhanced fluent API
-    game.createScene("test", () -> new SimpleScene(game.getEntityFactory()));
+    game.createScene("test", () -> new SimpleScene2(game.getEntityFactory()));
 
     // Set active scene after all scenes are created
     game.setActiveScene("test");
@@ -186,15 +188,22 @@ public class Main {
     var uiSystem = game.getUiSystem();
 
     // Create gravity slider
-    Entity gravitySlider = uiSystem.createSlider("Gravity", 40, 50, 150, 20, -20, 20, 9.8f);
-    var button = uiSystem.createButton("Click Me", 40, 80, 50, 20);
-    var b = (Button) button.get(UIComponent.class).getUi();
-    b.addClickListener((e) -> {
-      System.out.println("Button Clicked");
-    });
+    Entity gravitySliderY = uiSystem.createSlider("Gravity Y", 40, 50, 150, 20, -20, 20, 9.8f);
+    Entity gravitySliderX = uiSystem.createSlider("Gravity X", 40, 80, 150, 20, -20, 20, 9.8f);
+    // var button = uiSystem.createButton("Click Me", 40, 80, 50, 20);
+    // var b = (Button) button.get(UIComponent.class).getUi();
+    // b.addClickListener((e) -> {
+    // System.out.println("Button Clicked");
+    // });
     // Set callback for when value changes
-    uiSystem.setSliderCallback(gravitySlider, (value) -> {
-      game.getPhysicsWorld().setGravity(new org.jbox2d.common.Vec2(0, -value));
+    uiSystem.setSliderCallback(gravitySliderX, (value) -> {
+      game.getPhysicsWorld().setGravity(
+          new org.jbox2d.common.Vec2(value, ((Slider) gravitySliderY.get(UIComponent.class).getUi()).getValue()));
+    });
+
+    uiSystem.setSliderCallback(gravitySliderY, (value) -> {
+      game.getPhysicsWorld().setGravity(
+          new org.jbox2d.common.Vec2(((Slider) gravitySliderX.get(UIComponent.class).getUi()).getValue(), value));
     });
 
   }

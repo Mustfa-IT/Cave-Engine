@@ -186,7 +186,7 @@ public abstract class EngineModule {
           Float.parseFloat(config.getProperty("physics.timeStep", "0.016667")));
 
       engineConfig.enableBodySleeping(
-          Boolean.parseBoolean(config.getProperty("physics.enableSleeping", "true")));
+          Boolean.parseBoolean(config.getProperty("physics.enableSleeping", "false")));
 
       engineConfig.broadphaseOptimization(
           Boolean.parseBoolean(config.getProperty("physics.optimizeBroadphase", "false")));

@@ -404,7 +404,7 @@ public class RenderSystem implements RenderingSystem {
     world.findEntitiesWith(Transform.class, GameObjectComponent.class).forEach(result -> {
       Transform transform = result.comp1();
       GameObjectComponent gameObjectComp = result.comp2();
-
+      if(gameObjectComp == null && transform == null) return;
       // Skip if the GameObject has been destroyed
       if (gameObjectComp.isDestroyed()) {
         return;
