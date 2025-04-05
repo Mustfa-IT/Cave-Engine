@@ -3,32 +3,26 @@ package com.engine.graph;
 import java.awt.Graphics2D;
 
 /**
- * Interface for custom renderers that can be added to the rendering pipeline.
- * This allows game systems to add their own rendering without modifying the core RenderSystem.
+ * Interface for components that need to render custom graphics directly via the
+ * RenderSystem.
+ * This interface is implemented by systems that need to add additional
+ * rendering
+ * capabilities that aren't tied to specific entities.
  */
 public interface CustomRenderer {
-    /**
-     * Render custom graphics
-     *
-     * @param g The graphics context to render with
-     */
-    void render(Graphics2D g);
 
-    /**
-     * Get the priority of this renderer (higher numbers render later/on top)
-     *
-     * @return The rendering priority
-     */
-    default int getPriority() {
-        return 0;
-    }
+  /**
+   * Render this component
+   *
+   * @param g The graphics context to render with
+   */
+  void render(Graphics2D g);
 
-    /**
-     * Check if this renderer is currently active
-     *
-     * @return true if active and should be rendered
-     */
-    default boolean isActive() {
-        return true;
-    }
+  /**
+   * Get the rendering priority of this renderer.
+   * Higher values mean the renderer is drawn later (on top).
+   *
+   * @return The priority value
+   */
+  int getPriority();
 }

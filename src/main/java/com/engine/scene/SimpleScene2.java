@@ -1,4 +1,4 @@
-package com.engine.scenes;
+package com.engine.scene;
 
 import java.awt.Color;
 import java.util.Random;
@@ -6,7 +6,6 @@ import java.util.Random;
 import javax.inject.Inject;
 
 import com.engine.entity.EntityFactory;
-import com.engine.scene.Scene;
 
 /**
  * A simple scene that creates a box with many dynamic balls inside
