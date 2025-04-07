@@ -10,6 +10,7 @@ import com.engine.components.UIComponent;
 import com.engine.core.AbstractGameObject;
 import com.engine.gameobject.GameObject;
 import com.engine.entity.EntityFactory.PhysicsParameters;
+import com.engine.scene.AudioScene;
 import com.engine.scene.PScene;
 import com.engine.scene.SimpleScene;
 import com.engine.scene.SimpleScene2;
@@ -36,7 +37,7 @@ public class Main {
     GameEngine game = GameEngine.createEngine();
 
     // Configure the engine with enhanced fluent API
-    game.createScene("test", () -> new PScene(game.getEntityFactory()));
+    game.createScene("test", () -> new AudioScene(game.getEntityFactory()));
 
     // Set active scene after all scenes are created
     game.setActiveScene("test");
@@ -45,16 +46,16 @@ public class Main {
     game.start();
 
     // Set up input handlers for creating custom GameObjects
-  //   setupInputHandlers(game);
+    // setupInputHandlers(game);
 
-  //   // Create UI elements for controlling the engine
-  //   setupUIControls(game);
+    // // Create UI elements for controlling the engine
+    // setupUIControls(game);
 
-  //   // Set up event listeners
-  //   setupEventListeners(game);
+    // // Set up event listeners
+    // setupEventListeners(game);
 
-  //   // Set up the editor system
-  //   setupEditorSystem(game);
+    // // Set up the editor system
+    // setupEditorSystem(game);
   }
 
   /**

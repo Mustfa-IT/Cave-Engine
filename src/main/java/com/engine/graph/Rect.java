@@ -17,4 +17,12 @@ public class Rect extends Shape {
     // Center the rectangle at (0,0) - this works correctly in world space
     g.fillRect((int) -width / 2, (int) -height / 2, (int) width, (int) height);
   }
+
+  public double getWidth() {
+    return width;
+  }
+
+  public double getHeight() {
+    return height;
+  }
 }

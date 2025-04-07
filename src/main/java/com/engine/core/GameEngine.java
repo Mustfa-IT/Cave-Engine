@@ -20,6 +20,8 @@ import com.engine.assets.AssetManager;
 import com.engine.animation.AnimationSystem;
 import com.engine.particles.ParticleSystem;
 import com.engine.particles.ParticleEmitter;
+import com.engine.audio.AudioSystem;
+import com.engine.audio.AudioListenerComponent;
 
 import dev.dominion.ecs.api.Dominion;
 import dev.dominion.ecs.api.Entity;
@@ -91,6 +93,7 @@ public class GameEngine implements OverlayRenderer {
   private final AssetManager assetManager;
   private final AnimationSystem animationSystem;
   private final ParticleSystem particleSystem;
+  private final AudioSystem audioSystem;
 
   // List to store additional overlay renderers
   private final List<Consumer<Graphics2D>> overlayRenderers = new ArrayList<>();
@@ -104,7 +107,8 @@ public class GameEngine implements OverlayRenderer {
       EntityFactory entityFactory, UISystem uiSystem,
       InputManager inputManager, EngineConfig config,
       EventSystem eventSystem, AssetManager assetManager,
-      AnimationSystem animationSystem, ParticleSystem particleSystem) {
+      AnimationSystem animationSystem, ParticleSystem particleSystem,
+      AudioSystem audioSystem) {
     this.gameFrame = gameFrame;
     this.window = window; // Use the provided window instance
     this.ecs = ecs;
@@ -119,6 +123,7 @@ public class GameEngine implements OverlayRenderer {
     this.assetManager = assetManager;
     this.animationSystem = animationSystem;
     this.particleSystem = particleSystem;
+    this.audioSystem = audioSystem;
     this.debugGrid = this.config.isShowGrid();
     this.debugColliders = this.config.isDebugColliders();
     this.debugPhysics = this.config.isDebugPhysics();
@@ -163,6 +168,14 @@ public class GameEngine implements OverlayRenderer {
       // Create scene manager with reference to engine, entity factory, and UI system
       this.sceneManager = new SceneManager(this, entityFactory, uiSystem);
 
+      // Initialize audio system
+      if (!audioSystem.initialize()) {
+        LOGGER.warning("Failed to initialize audio system");
+      }
+
+      // Connect AssetManager to AudioSystem for audio loading
+      assetManager.setAudioSystem(audioSystem, eventSystem);
+
       // Setup the main loop scheduler
       this.scheduler = ecs.createScheduler();
       this.scheduler.schedule(this::update);
@@ -172,6 +185,8 @@ public class GameEngine implements OverlayRenderer {
       this.scheduler.schedule(() -> animationSystem.update(this.scheduler.deltaTime()));
       // Add particle system to the scheduler
       this.scheduler.schedule(() -> particleSystem.update((float) this.scheduler.deltaTime()));
+      // Add audio system to the scheduler
+      this.scheduler.schedule(() -> audioSystem.update(this.scheduler.deltaTime()));
 
       // Initialize FPS counter
       lastFpsReportTime = System.currentTimeMillis();
@@ -362,6 +377,7 @@ public class GameEngine implements OverlayRenderer {
     LOGGER.info("Stopping the Game Engine...");
 
     // Clean up resources
+    audioSystem.shutdown(); // Shutdown audio resources
     assetManager.shutdown();
     // Notify listeners
     eventSystem.fireEvent(new GameEvent("game:shutdown"));
@@ -874,6 +890,72 @@ public class GameEngine implements OverlayRenderer {
 
   public double getDeltaTime() {
     return this.scheduler.deltaTime();
+  }
+
+  /**
+   * Create an audio listener on the given entity (typically the camera)
+   *
+   * @param entity Entity to attach audio listener to
+   * @return The engine instance for method chaining
+   */
+  public GameEngine createAudioListener(Entity entity) {
+    audioSystem.createAudioListener(entity);
+    return this;
+  }
+
+  /**
+   * Play a sound from the entity's position
+   *
+   * @param entity  The entity to play the sound from
+   * @param soundId The identifier of the loaded sound asset
+   * @param loop    Whether the sound should loop
+   * @return The engine instance for method chaining
+   */
+  public GameEngine playSound(Entity entity, String soundId, boolean loop) {
+    audioSystem.playSound(entity, soundId, loop);
+    return this;
+  }
+
+  /**
+   * Stop a sound that's currently playing on an entity
+   *
+   * @param entity The entity to stop sounds on
+   * @return The engine instance for method chaining
+   */
+  public GameEngine stopSound(Entity entity) {
+    audioSystem.stopSound(entity);
+    return this;
+  }
+
+  /**
+   * Set the global audio mute state
+   *
+   * @param muted Whether audio should be muted
+   * @return The engine instance for method chaining
+   */
+  public GameEngine setAudioMuted(boolean muted) {
+    audioSystem.setMuted(muted);
+    return this;
+  }
+
+  /**
+   * Set the global master volume
+   *
+   * @param volume Volume level from 0.0 to 1.0
+   * @return The engine instance for method chaining
+   */
+  public GameEngine setMasterVolume(float volume) {
+    audioSystem.setMasterVolume(volume);
+    return this;
+  }
+
+  /**
+   * Get the audio system
+   *
+   * @return The audio system instance
+   */
+  public AudioSystem getAudioSystem() {
+    return audioSystem;
   }
 
 }

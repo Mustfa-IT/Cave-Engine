@@ -7,12 +7,19 @@ package com.engine.components;
 public class Transform {
   private double x;
   private double y;
+  private double z;
   private double rotation; // in radians
   private double scaleX;
   private double scaleY;
 
   public Transform(double x, double y) {
     this(x, y, Math.toRadians(0), 1, 1);
+    this.z = 1;
+  }
+
+  public Transform(double x, double y, double z) {
+    this(x, y, Math.toRadians(0), 1, 1);
+    this.z = z;
   }
 
   /// Rotation in Radians
@@ -39,6 +46,14 @@ public class Transform {
 
   public void setY(double y) {
     this.y = y;
+  }
+
+  public double getZ() {
+    return z;
+  }
+
+  public void setZ(double z) {
+    this.z = z;
   }
 
   public double getRotation() {

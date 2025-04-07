@@ -70,10 +70,10 @@ public class PScene extends Scene {
         // Auto-remove after 3 seconds
         new Thread(() -> {
           // try {
-          //   Thread.sleep(3000);
-          //   particleSystem.removeEmitter(smokeEmitter);
+          // Thread.sleep(3000);
+          // particleSystem.removeEmitter(smokeEmitter);
           // } catch (InterruptedException ex) {
-          //   Thread.currentThread().interrupt();
+          // Thread.currentThread().interrupt();
           // }
         }).start();
       }
@@ -172,6 +172,10 @@ public class PScene extends Scene {
   @Override
   public void update(double deltaTime) {
     // Scene update logic
+    if (engine == null) {
+      System.out.println("Engine is null");
+      return;
+    }
   }
 
 }

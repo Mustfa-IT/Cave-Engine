@@ -7,6 +7,9 @@ import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
+import java.nio.ShortBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -18,9 +21,24 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
+import javax.inject.Inject;
 import javax.inject.Singleton;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.UnsupportedAudioFileException;
+
+import org.lwjgl.BufferUtils;
+import org.lwjgl.openal.AL10;
+import org.lwjgl.stb.STBVorbis;
+import org.lwjgl.stb.STBVorbisInfo;
+import org.lwjgl.system.MemoryStack;
 
 import com.engine.animation.Animation;
+import com.engine.audio.AudioClip;
+// Removed redundant import to resolve collision
+import com.engine.events.EventSystem;
+import com.engine.events.EventTypes;
 
 /**
  * Manages loading and caching of game assets like images, fonts, and sounds
@@ -33,6 +51,21 @@ public class AssetManager {
   private final Map<String, AssetInfo> assetInfo = new HashMap<>();
   private final ExecutorService asyncLoader = Executors.newSingleThreadExecutor();
   private Path basePath = Paths.get("assets");
+
+  // Audio system reference
+  private com.engine.audio.AudioSystem audioSystem;
+  private EventSystem eventSystem;
+
+  @Inject
+  public AssetManager() {
+    // Default constructor
+  }
+
+  @Inject
+  public void setAudioSystem(com.engine.audio.AudioSystem audioSystem, EventSystem eventSystem) {
+    this.audioSystem = audioSystem;
+    this.eventSystem = eventSystem;
+  }
 
   /**
    * Set the base directory for loading assets
@@ -111,6 +144,234 @@ public class AssetManager {
       LOGGER.log(Level.WARNING, "Failed to load font: " + path, e);
       return new Font(Font.SANS_SERIF, Font.PLAIN, (int) size);
     }
+  }
+
+  /**
+   * Load an audio file (WAV format)
+   *
+   * @param id   The identifier for the asset
+   * @param path The path to the audio file (relative to base path)
+   * @return The loaded audio clip or null if loading failed
+   */
+  public AudioClip loadAudio(String id, String path) {
+    if (assets.containsKey(id)) {
+      return (AudioClip) assets.get(id);
+    }
+
+    if (audioSystem == null || !audioSystem.isInitialized()) {
+      LOGGER.warning("Audio system not initialized when loading audio: " + id);
+      return null;
+    }
+
+    try {
+      Path fullPath = basePath.resolve(path);
+      AudioInputStream audioStream = AudioSystem.getAudioInputStream(fullPath.toFile());
+      AudioFormat format = audioStream.getFormat();
+
+      // Check format is supported (OpenAL requires mono or stereo, 8 or 16 bit PCM)
+      if (format.getEncoding() != AudioFormat.Encoding.PCM_SIGNED &&
+          format.getEncoding() != AudioFormat.Encoding.PCM_UNSIGNED) {
+        // Convert to PCM signed 16-bit
+        format = new AudioFormat(
+            AudioFormat.Encoding.PCM_SIGNED,
+            format.getSampleRate(),
+            16,
+            format.getChannels(),
+            format.getChannels() * 2,
+            format.getSampleRate(),
+            false);
+        audioStream = AudioSystem.getAudioInputStream(format, audioStream);
+      }
+
+      // Read audio data
+      byte[] data = new byte[audioStream.available()];
+      int bytesRead = audioStream.read(data);
+      audioStream.close();
+
+      // Create OpenAL buffer
+      IntBuffer buffer = BufferUtils.createIntBuffer(1);
+      AL10.alGenBuffers(buffer);
+      int bufferId = buffer.get(0);
+
+      // Determine OpenAL format based on channels and bit depth
+      int openALFormat = getOpenALFormat(format);
+      if (openALFormat == -1) {
+        LOGGER.warning("Unsupported audio format: " + format);
+        AL10.alDeleteBuffers(bufferId);
+        return null;
+      }
+
+      // Create ByteBuffer from audio data
+      ByteBuffer byteBuffer = BufferUtils.createByteBuffer(data.length);
+      byteBuffer.put(data);
+      byteBuffer.flip();
+
+      // Fill OpenAL buffer
+      AL10.alBufferData(bufferId, openALFormat, byteBuffer, (int) format.getSampleRate());
+
+      // Calculate duration
+      float durationSeconds = bytesRead
+          / (format.getSampleRate() * format.getChannels() * (format.getSampleSizeInBits() / 8));
+
+      // Create AudioClip
+      AudioClip clip = new AudioClip(id, bufferId, AudioClip.AudioType.SOUND_EFFECT, durationSeconds);
+
+      // Store in cache
+      assets.put(id, clip);
+      assetInfo.put(id, new AssetInfo(id, AssetType.SOUND, path));
+
+      // Register with audio system
+      if (audioSystem != null) {
+        audioSystem.registerAudioClip(clip);
+      }
+
+      // Fire event
+      if (eventSystem != null) {
+        eventSystem.fireEvent(EventTypes.AUDIO_LOAD_COMPLETE,
+            "id", id,
+            "clip", clip,
+            "path", path);
+      }
+
+      LOGGER.fine("Loaded audio: " + id + " from " + path + " (duration: " + durationSeconds + "s)");
+      return clip;
+
+    } catch (UnsupportedAudioFileException | IOException e) {
+      LOGGER.log(Level.WARNING, "Failed to load audio: " + path, e);
+
+      // Fire error event
+      if (eventSystem != null) {
+        eventSystem.fireEvent(EventTypes.AUDIO_LOAD_ERROR,
+            "id", id,
+            "path", path,
+            "error", e.getMessage());
+      }
+
+      return null;
+    }
+  }
+
+  /**
+   * Load an OGG Vorbis audio file
+   *
+   * @param id   The identifier for the asset
+   * @param path The path to the OGG file (relative to base path)
+   * @return The loaded audio clip or null if loading failed
+   */
+  public AudioClip loadOgg(String id, String path) {
+    if (assets.containsKey(id)) {
+      return (AudioClip) assets.get(id);
+    }
+
+    if (audioSystem == null || !audioSystem.isInitialized()) {
+      LOGGER.warning("Audio system not initialized when loading audio: " + id);
+      return null;
+    }
+
+    try {
+      Path fullPath = basePath.resolve(path);
+      String filePath = fullPath.toAbsolutePath().toString();
+
+      IntBuffer errorBuffer = BufferUtils.createIntBuffer(1);
+      long decoder = STBVorbis.stb_vorbis_open_filename(filePath, errorBuffer, null);
+
+      if (decoder == 0) {
+        LOGGER.warning("Failed to load OGG file: " + path + " (error: " + errorBuffer.get(0) + ")");
+        return null;
+      }
+
+      try (STBVorbisInfo info = STBVorbisInfo.malloc()) {
+        STBVorbis.stb_vorbis_get_info(decoder, info);
+
+        // Get file info
+        int channels = info.channels();
+        int sampleRate = info.sample_rate();
+
+        // Get total samples and calculate duration
+        int totalSamples = STBVorbis.stb_vorbis_stream_length_in_samples(decoder);
+        float durationSeconds = (float) totalSamples / sampleRate;
+
+        // Create buffer for decoded data
+        ShortBuffer pcm = BufferUtils.createShortBuffer(totalSamples * channels);
+
+        // Decode the file
+        int samplesPerChannel = STBVorbis.stb_vorbis_get_samples_short_interleaved(decoder, channels, pcm);
+
+        // Close the decoder as we've read all the data
+        STBVorbis.stb_vorbis_close(decoder);
+
+        // Create OpenAL buffer
+        IntBuffer buffer = BufferUtils.createIntBuffer(1);
+        AL10.alGenBuffers(buffer);
+        int bufferId = buffer.get(0);
+
+        // Determine format
+        int format = channels == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16;
+
+        // Set buffer data
+        AL10.alBufferData(bufferId, format, pcm, sampleRate);
+
+        // Create AudioClip
+        AudioClip clip = new AudioClip(id, bufferId, AudioClip.AudioType.MUSIC, durationSeconds);
+
+        // Store in cache
+        assets.put(id, clip);
+        assetInfo.put(id, new AssetInfo(id, AssetType.SOUND, path));
+
+        // Register with audio system
+        if (audioSystem != null) {
+          audioSystem.registerAudioClip(clip);
+        }
+
+        // Fire event
+        if (eventSystem != null) {
+          eventSystem.fireEvent(EventTypes.AUDIO_LOAD_COMPLETE,
+              "id", id,
+              "clip", clip,
+              "path", path);
+        }
+
+        LOGGER.fine("Loaded OGG: " + id + " from " + path + " (duration: " + durationSeconds + "s)");
+        return clip;
+      }
+
+    } catch (Exception e) {
+      LOGGER.log(Level.WARNING, "Failed to load OGG: " + path, e);
+
+      // Fire error event
+      if (eventSystem != null) {
+        eventSystem.fireEvent(EventTypes.AUDIO_LOAD_ERROR,
+            "id", id,
+            "path", path,
+            "error", e.getMessage());
+      }
+
+      return null;
+    }
+  }
+
+  /**
+   * Determine the OpenAL format based on the Java audio format
+   */
+  private int getOpenALFormat(AudioFormat format) {
+    int channels = format.getChannels();
+    int bits = format.getSampleSizeInBits();
+
+    if (channels == 1) {
+      if (bits == 8) {
+        return AL10.AL_FORMAT_MONO8;
+      } else if (bits == 16) {
+        return AL10.AL_FORMAT_MONO16;
+      }
+    } else if (channels == 2) {
+      if (bits == 8) {
+        return AL10.AL_FORMAT_STEREO8;
+      } else if (bits == 16) {
+        return AL10.AL_FORMAT_STEREO16;
+      }
+    }
+
+    return -1; // Unsupported format
   }
 
   /**
