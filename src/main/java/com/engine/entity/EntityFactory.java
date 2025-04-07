@@ -68,6 +68,7 @@ public class EntityFactory {
         LOGGER.warning("Error registering entity: " + e.getMessage());
       }
     }
+    entity = registerWithRegistrar(entity);
     return entity;
   }
 

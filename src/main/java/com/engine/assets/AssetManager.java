@@ -276,7 +276,14 @@ public class AssetManager {
       long decoder = STBVorbis.stb_vorbis_open_filename(filePath, errorBuffer, null);
 
       if (decoder == 0) {
-        LOGGER.warning("Failed to load OGG file: " + path + " (error: " + errorBuffer.get(0) + ")");
+        int errorCode = errorBuffer.get(0);
+        LOGGER.warning("Failed to load OGG file: " + path + " (error code: " + errorCode + ")");
+        if (eventSystem != null) {
+          eventSystem.fireEvent(EventTypes.AUDIO_LOAD_ERROR,
+              "id", id,
+              "path", path,
+              "error", "STBVorbis error code: " + errorCode);
+        }
         return null;
       }
 
