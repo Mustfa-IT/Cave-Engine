@@ -25,6 +25,7 @@ import com.engine.events.EventTypes;
 import com.engine.graph.CustomRenderer;
 import com.engine.graph.RenderSystem;
 import com.engine.particles.emitters.PhysicalParticleEmitter;
+import com.engine.physics.Collision;
 import com.engine.physics.CollisionSystem;
 import com.engine.util.ParticleQuadTree;
 import com.engine.util.SpatialHashGrid;
@@ -657,7 +658,7 @@ public class ParticleSystem implements CustomRenderer {
   private void setupCollisionHandling(CollisionSystem collisionSystem) {
     // Listen for collision events
     eventSystem.addEventListener(EventTypes.COLLISION_BEGIN, event -> {
-      Contact contact = (Contact) event.getData("collision");
+      Contact contact = ((Collision) event.getData("collision")).getContact();
       if (contact != null) {
         Body bodyA = contact.getFixtureA().getBody();
         Body bodyB = contact.getFixtureB().getBody();

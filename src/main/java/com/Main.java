@@ -36,7 +36,7 @@ public class Main {
     GameEngine game = GameEngine.createEngine();
 
     // Configure the engine with enhanced fluent API
-    game.createScene("test", () -> new PScene(game.getEntityFactory()));
+    game.createScene("test", () -> new SimpleScene(game.getEntityFactory()));
 
     // Set active scene after all scenes are created
     game.setActiveScene("test");
@@ -44,7 +44,7 @@ public class Main {
     // Start the engine
     game.start();
 
-    // // Set up input handlers for creating custom GameObjects
+    // Set up input handlers for creating custom GameObjects
     // setupInputHandlers(game);
 
     // // Create UI elements for controlling the engine
