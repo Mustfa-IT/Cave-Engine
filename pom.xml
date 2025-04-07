@@ -13,7 +13,21 @@
     <maven.compiler.target>17</maven.compiler.target>
     <dagger.version>2.56.1</dagger.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <lwjgl.version>3.3.6</lwjgl.version>
+    <lwjgl.natives>natives-windows</lwjgl.natives>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>org.lwjgl</groupId>
+        <artifactId>lwjgl-bom</artifactId>
+        <version>${lwjgl.version}</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <!-- Dagger runtime -->
@@ -38,11 +52,38 @@
       <scope>system</scope>
       <systemPath>${project.basedir}/lib/jbox2d-library-2.3.1-SNAPSHOT.jar</systemPath>
     </dependency>
-
     <dependency>
       <groupId>dev.dominion.ecs</groupId>
       <artifactId>dominion-ecs-engine</artifactId>
       <version>0.9.0</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-openal</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-stb</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl</artifactId>
+      <classifier>${lwjgl.natives}</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-openal</artifactId>
+      <classifier>${lwjgl.natives}</classifier>
+    </dependency>
+    <dependency>
+      <groupId>org.lwjgl</groupId>
+      <artifactId>lwjgl-stb</artifactId>
+      <classifier>${lwjgl.natives}</classifier>
     </dependency>
   </dependencies>
 

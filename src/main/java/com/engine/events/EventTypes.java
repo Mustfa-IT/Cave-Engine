@@ -66,4 +66,14 @@ public interface EventTypes {
   String PARTICLE_EMITTER_ADDED = "particles:emitter:added";
   String PARTICLE_EMITTER_REMOVED = "particles:emitter:removed";
   String PARTICLE_COUNT_UPDATED = "particles:count:updated";
+
+  // Audio event types
+  String AUDIO_PLAY_START = "audio:play:start";
+  String AUDIO_PLAY_COMPLETE = "audio:play:complete";
+  String AUDIO_PLAY_STOP = "audio:play:stop";
+  String AUDIO_VOLUME_CHANGED = "audio:volume:changed";
+  String AUDIO_MUTE_CHANGED = "audio:mute:changed";
+  String AUDIO_LISTENER_CHANGED = "audio:listener:changed";
+  String AUDIO_LOAD_COMPLETE = "audio:load:complete";
+  String AUDIO_LOAD_ERROR = "audio:load:error";
 }

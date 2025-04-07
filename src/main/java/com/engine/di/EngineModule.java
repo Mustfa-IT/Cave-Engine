@@ -30,6 +30,7 @@ import com.engine.editor.EditorModule;
 import com.engine.particles.ParticleEmitterFactory;
 import com.engine.particles.ParticleSystem;
 import com.engine.physics.CollisionSystem;
+import com.engine.audio.AudioSystem;
 
 import dagger.Binds;
 import dagger.Module;
@@ -139,11 +140,11 @@ public abstract class EngineModule {
       return new UISystem(window, ecs, evnetSystem);
     }
 
-    @Provides
-    @Singleton
-    public SceneManager provideSceneManager(GameEngine engine, EntityFactory entityFactory, UISystem uiSystem) {
-      return new SceneManager(engine, entityFactory, uiSystem);
-    }
+    // @Provides
+    // @Singleton
+    // public SceneManager provideSceneManager(GameEngine engine, EntityFactory entityFactory, UISystem uiSystem) {
+    //   return new SceneManager(engine, entityFactory, uiSystem);
+    // }
 
     @Provides
     @Singleton
@@ -220,11 +221,13 @@ public abstract class EngineModule {
         EntityFactory entityFactory, UISystem uiSystem,
         InputManager inputManager, EngineConfig config,
         EventSystem eventSystem, AssetManager assetManager,
-        AnimationSystem animationSystem, ParticleSystem particleSystem) {
+        AnimationSystem animationSystem, ParticleSystem particleSystem,
+        AudioSystem audioSystem) { // Add AudioSystem parameter
 
       GameEngine engine = new GameEngine(gameFrame, window, ecs, renderer, cameraSystem, // Pass window here
           (PhysicsWorld) physicsWorld, entityFactory, uiSystem, inputManager,
-          config, eventSystem, assetManager, animationSystem, particleSystem);
+          config, eventSystem, assetManager, animationSystem, particleSystem,
+          audioSystem); // Pass AudioSystem here
 
       // Initialize console right after engine creation
       engine.createConsole();
@@ -258,8 +261,7 @@ public abstract class EngineModule {
         EventSystem eventSystem,
         RenderSystem renderSystem,
         CollisionSystem collisionSystem,
-        CameraSystem cameraSystem
-        ) {
+        CameraSystem cameraSystem) {
       /*
        * (ParticleEmitterFactory emitterFactory,
        * EventSystem eventSystem,
@@ -267,7 +269,13 @@ public abstract class EngineModule {
        * CameraSystem cameraSystem,
        * CollisionSystem collisionSystem)
        */
-      return new ParticleSystem(emitterFactory, eventSystem, renderSystem,cameraSystem, collisionSystem);
+      return new ParticleSystem(emitterFactory, eventSystem, renderSystem, cameraSystem, collisionSystem);
+    }
+
+    @Provides
+    @Singleton
+    public AudioSystem provideAudioSystem(Dominion ecs, EventSystem eventSystem, AssetManager assetManager) {
+      return new AudioSystem(eventSystem, assetManager, ecs);
     }
   }
 }

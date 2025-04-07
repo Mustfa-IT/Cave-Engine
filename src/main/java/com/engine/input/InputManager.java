@@ -30,8 +30,21 @@ public class InputManager {
   // Track key states (pressed or not)
   private final Map<Integer, Boolean> keyStates = new HashMap<>();
 
+  // Key denoising
+  private boolean keyDenoisingEnabled = true;
+  private long keyDebounceTime = 50; // milliseconds to wait before accepting another key event
+  private final Map<Integer, Long> lastKeyEventTimes = new HashMap<>();
+  private final Map<Integer, Boolean> rawKeyStates = new HashMap<>();
+
   // Mouse position in screen coordinates
   private Point mouseScreenPosition = new Point(0, 0);
+
+  // Mouse position denoising
+  private boolean denoisingEnabled = true;
+  private float denoisingStrength = 1f; // 0.0 to 1.0, higher means more smoothing
+  private int denoisingBufferSize = 5;
+  private final List<Point> mousePositionHistory = new ArrayList<>();
+  private Point rawMouseScreenPosition = new Point(0, 0);
 
   // Track mouse button states
   private final Map<Integer, Boolean> mouseButtonStates = new HashMap<>();
@@ -86,13 +99,22 @@ public class InputManager {
     KeyListener keyListener = new KeyAdapter() {
       @Override
       public void keyPressed(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        rawKeyStates.put(keyCode, true);
+
+        // Apply key denoising if enabled
+        if (keyDenoisingEnabled) {
+          if (!applyKeyDenoising(keyCode, true)) {
+            return; // Event was filtered out by denoising
+          }
+        } else {
+          keyStates.put(keyCode, true);
+        }
+
         // First check if any custom listeners want to consume this event
         if (processKeyEvent(e, keyListeners)) {
           return;
         }
-
-        int keyCode = e.getKeyCode();
-        keyStates.put(keyCode, true);
 
         // Handle any registered callbacks
         if (keyPressCallbacks.containsKey(keyCode)) {
@@ -112,13 +134,22 @@ public class InputManager {
 
       @Override
       public void keyReleased(KeyEvent e) {
+        int keyCode = e.getKeyCode();
+        rawKeyStates.put(keyCode, false);
+
+        // Apply key denoising if enabled
+        if (keyDenoisingEnabled) {
+          if (!applyKeyDenoising(keyCode, false)) {
+            return; // Event was filtered out by denoising
+          }
+        } else {
+          keyStates.put(keyCode, false);
+        }
+
         // First check if any custom listeners want to consume this event
         if (processKeyEvent(e, keyListeners)) {
           return;
         }
-
-        int keyCode = e.getKeyCode();
-        keyStates.put(keyCode, false);
 
         // Handle any registered callbacks
         if (keyReleaseCallbacks.containsKey(keyCode)) {
@@ -132,7 +163,14 @@ public class InputManager {
     MouseMotionAdapter mouseMotionAdapter = new MouseMotionAdapter() {
       @Override
       public void mouseMoved(MouseEvent e) {
-        mouseScreenPosition.setLocation(e.getX(), e.getY());
+        rawMouseScreenPosition.setLocation(e.getX(), e.getY());
+
+        // Apply denoising if enabled
+        if (denoisingEnabled) {
+          applyDenoising(rawMouseScreenPosition);
+        } else {
+          mouseScreenPosition.setLocation(rawMouseScreenPosition);
+        }
 
         // Process through all priority levels (HIGH to LOW)
         boolean consumed = processMouseEventByPriority(e);
@@ -144,7 +182,14 @@ public class InputManager {
 
       @Override
       public void mouseDragged(MouseEvent e) {
-        mouseScreenPosition.setLocation(e.getX(), e.getY());
+        rawMouseScreenPosition.setLocation(e.getX(), e.getY());
+
+        // Apply denoising if enabled
+        if (denoisingEnabled) {
+          applyDenoising(rawMouseScreenPosition);
+        } else {
+          mouseScreenPosition.setLocation(rawMouseScreenPosition);
+        }
 
         // Process through all priority levels (HIGH to LOW)
         boolean consumed = processMouseEventByPriority(e);
@@ -197,6 +242,170 @@ public class InputManager {
     window.addMouseListener(mouseAdapter);
 
     LOGGER.info("Input manager initialized");
+  }
+
+  /**
+   * Apply denoising to key input
+   *
+   * @param keyCode   The key code from the input event
+   * @param isPressed Whether the key is pressed or released
+   * @return true if event should be processed, false if filtered out
+   */
+  private boolean applyKeyDenoising(int keyCode, boolean isPressed) {
+    long currentTime = System.currentTimeMillis();
+    long lastEventTime = lastKeyEventTimes.getOrDefault(keyCode, 0L);
+
+    // Check if enough time has passed since last event for this key
+    if (currentTime - lastEventTime < keyDebounceTime) {
+      LOGGER.finest("Filtered key event due to debounce: " + keyCode);
+      return false;
+    }
+
+    // Update last event time for this key
+    lastKeyEventTimes.put(keyCode, currentTime);
+
+    // Check if state has actually changed
+    Boolean currentState = keyStates.getOrDefault(keyCode, false);
+    if (currentState == isPressed) {
+      // State hasn't changed, filter out redundant event
+      return false;
+    }
+
+    // Update the denoised state
+    keyStates.put(keyCode, isPressed);
+    return true;
+  }
+
+  /**
+   * Enable or disable key denoising
+   *
+   * @param enabled True to enable denoising, false to disable
+   * @return this InputManager for method chaining
+   */
+  public InputManager setKeyDenoisingEnabled(boolean enabled) {
+    this.keyDenoisingEnabled = enabled;
+    if (!enabled) {
+      lastKeyEventTimes.clear();
+      // Sync key states with raw states
+      for (Map.Entry<Integer, Boolean> entry : rawKeyStates.entrySet()) {
+        keyStates.put(entry.getKey(), entry.getValue());
+      }
+    }
+    return this;
+  }
+
+  /**
+   * Set the debounce time for key denoising
+   *
+   * @param milliseconds Time to wait before accepting another key event
+   * @return this InputManager for method chaining
+   */
+  public InputManager setKeyDebounceTime(long milliseconds) {
+    this.keyDebounceTime = Math.max(0, milliseconds);
+    return this;
+  }
+
+  /**
+   * Get the raw (unfiltered) key state
+   *
+   * @param keyCode KeyEvent code to check
+   * @return true if key is pressed in raw state, false otherwise
+   */
+  public boolean isRawKeyPressed(int keyCode) {
+    return rawKeyStates.getOrDefault(keyCode, false);
+  }
+
+  /**
+   * Apply denoising to mouse input
+   *
+   * @param rawPosition The raw mouse position from the input event
+   */
+  private void applyDenoising(Point rawPosition) {
+    // Add the new position to the history
+    mousePositionHistory.add(new Point(rawPosition));
+
+    // Limit history size
+    while (mousePositionHistory.size() > denoisingBufferSize) {
+      mousePositionHistory.remove(0);
+    }
+
+    // Not enough data points for smoothing yet
+    if (mousePositionHistory.size() < 2) {
+      mouseScreenPosition.setLocation(rawPosition);
+      return;
+    }
+
+    // Weighted moving average - newer positions have more weight
+    double totalWeight = 0;
+    double weightedX = 0;
+    double weightedY = 0;
+
+    // Calculate weighted values
+    for (int i = 0; i < mousePositionHistory.size(); i++) {
+      // Weight increases with index (more recent = higher weight)
+      double weight = i + 1;
+      Point p = mousePositionHistory.get(i);
+
+      weightedX += p.x * weight;
+      weightedY += p.y * weight;
+      totalWeight += weight;
+    }
+
+    // Calculate the smoothed position
+    int smoothedX = (int) (weightedX / totalWeight);
+    int smoothedY = (int) (weightedY / totalWeight);
+
+    // Interpolate between raw and smoothed position based on strength
+    int finalX = (int) ((1 - denoisingStrength) * rawPosition.x + denoisingStrength * smoothedX);
+    int finalY = (int) ((1 - denoisingStrength) * rawPosition.y + denoisingStrength * smoothedY);
+
+    mouseScreenPosition.setLocation(finalX, finalY);
+  }
+
+  /**
+   * Enable or disable input denoising
+   *
+   * @param enabled True to enable denoising, false to disable
+   * @return this InputManager for method chaining
+   */
+  public InputManager setDenoisingEnabled(boolean enabled) {
+    this.denoisingEnabled = enabled;
+    if (!enabled) {
+      mousePositionHistory.clear();
+    }
+    return this;
+  }
+
+  /**
+   * Set the strength of the denoising filter
+   *
+   * @param strength Value from 0.0 (no smoothing) to 1.0 (maximum smoothing)
+   * @return this InputManager for method chaining
+   */
+  public InputManager setDenoisingStrength(float strength) {
+    this.denoisingStrength = Math.max(0.0f, Math.min(1.0f, strength));
+    return this;
+  }
+
+  /**
+   * Set the size of the denoising buffer (how many previous positions to track)
+   *
+   * @param size Number of positions to store in history (higher = smoother but
+   *             more lag)
+   * @return this InputManager for method chaining
+   */
+  public InputManager setDenoisingBufferSize(int size) {
+    this.denoisingBufferSize = Math.max(2, size);
+    return this;
+  }
+
+  /**
+   * Get the raw (unfiltered) mouse position
+   *
+   * @return Point containing raw screen coordinates
+   */
+  public Point getRawMousePosition() {
+    return new Point(rawMouseScreenPosition);
   }
 
   /**

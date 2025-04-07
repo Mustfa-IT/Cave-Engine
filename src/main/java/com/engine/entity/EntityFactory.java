@@ -68,13 +68,14 @@ public class EntityFactory {
         LOGGER.warning("Error registering entity: " + e.getMessage());
       }
     }
+    entity = registerWithRegistrar(entity);
     return entity;
   }
 
   /**
    * Creates a static ground platform in world coordinates
    */
-  public String createGround(float x, float y, float width, float height, Color color) {
+  public Entity createGround(float x, float y, float width, float height, Color color) {
     // Create physics body definition
     BodyDef groundBodyDef = new BodyDef();
     groundBodyDef.type = BodyType.STATIC;
@@ -99,7 +100,8 @@ public class EntityFactory {
         new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f));
 
     System.out.println("Created ground at: " + x + "," + y + " with size: " + width + "x" + height);
-    return registerWithRegistrar(entity).toString();
+    registerWithRegistrar(entity).toString();
+    return entity;
   }
 
   /**
