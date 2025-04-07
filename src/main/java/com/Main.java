@@ -44,17 +44,17 @@ public class Main {
     // Start the engine
     game.start();
 
-    // // Set up input handlers for creating custom GameObjects
-    // setupInputHandlers(game);
+    // Set up input handlers for creating custom GameObjects
+  //   setupInputHandlers(game);
 
-    // // Create UI elements for controlling the engine
-    // setupUIControls(game);
+  //   // Create UI elements for controlling the engine
+  //   setupUIControls(game);
 
-    // // Set up event listeners
-    // setupEventListeners(game);
+  //   // Set up event listeners
+  //   setupEventListeners(game);
 
-    // // Set up the editor system
-    // setupEditorSystem(game);
+  //   // Set up the editor system
+  //   setupEditorSystem(game);
   }
 
   /**
