@@ -205,7 +205,6 @@ public class CameraSystem {
     transform.setX(x);
     transform.setY(y);
 
-    LOGGER.info("Camera position set to: " + x + ", " + y);
   }
 
   /**
