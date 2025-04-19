@@ -58,6 +58,7 @@ public class InputManager {
   // Custom key handlers - divide listeners by priority
   private final List<Function<KeyEvent, Boolean>> keyListeners = new ArrayList<>();
   private final List<Function<KeyEvent, Boolean>> keyTypedListeners = new ArrayList<>();
+  private final List<Function<KeyEvent, Boolean>> keyReleasedListeners = new ArrayList<>();
 
   // Store mouse listeners in priority buckets (High, Normal, Low)
   private final Map<Priority, List<Function<MouseEvent, Boolean>>> mouseListenersByPriority = new HashMap<>();
@@ -148,6 +149,11 @@ public class InputManager {
 
         // First check if any custom listeners want to consume this event
         if (processKeyEvent(e, keyListeners)) {
+          return;
+        }
+
+        // Check if any key released listeners want to consume this event
+        if (processKeyEvent(e, keyReleasedListeners)) {
           return;
         }
 
@@ -595,6 +601,17 @@ public class InputManager {
       addMouseListener(listener, Priority.HIGH);
     } else {
       addMouseListener(listener, Priority.NORMAL);
+    }
+  }
+
+  /**
+   * Add a listener specifically for KEY_RELEASED events
+   *
+   * @param listener The listener that returns true if it consumed the event
+   */
+  public void addKeyReleasedListener(Function<KeyEvent, Boolean> listener) {
+    if (listener != null) {
+      keyReleasedListeners.add(listener);
     }
   }
 }
