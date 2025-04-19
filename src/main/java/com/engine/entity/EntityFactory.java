@@ -39,11 +39,24 @@ import dev.dominion.ecs.api.Entity;
  */
 @Singleton
 public class EntityFactory {
+  /** Logger for entity factory messages */
   private static final Logger LOGGER = Logger.getLogger(EntityFactory.class.getName());
+
+  /** Entity Component System for managing entities */
   private final Dominion ecs;
+
+  /** Physics world for physics calculations and conversions */
   private final PhysicsWorld physicsWorld;
+
+  /** Current entity registrar for registering created entities */
   private EntityRegistrar currentRegistrar;
 
+  /**
+   * Creates a new EntityFactory
+   *
+   * @param ecs          The Entity Component System
+   * @param physicsWorld The physics world
+   */
   @Inject
   public EntityFactory(Dominion ecs, PhysicsWorld physicsWorld) {
     this.ecs = ecs;
@@ -52,6 +65,8 @@ public class EntityFactory {
 
   /**
    * Set the current entity registrar
+   *
+   * @param registrar The entity registrar to use
    */
   public void setCurrentRegistrar(EntityRegistrar registrar) {
     this.currentRegistrar = registrar;
@@ -59,6 +74,9 @@ public class EntityFactory {
 
   /**
    * Register created entity with current registrar
+   *
+   * @param entity The entity to register
+   * @return The registered entity
    */
   private Entity registerWithRegistrar(Entity entity) {
     if (currentRegistrar != null && entity != null) {
@@ -68,18 +86,56 @@ public class EntityFactory {
         LOGGER.warning("Error registering entity: " + e.getMessage());
       }
     }
-    entity = registerWithRegistrar(entity);
+    // Fixed infinite recursion bug - just return the entity if no registrar or
+    // error
     return entity;
   }
 
   /**
+   * Validates that a dimensional parameter is positive
+   *
+   * @param value The value to check
+   * @param name  The parameter name for error reporting
+   * @throws IllegalArgumentException if value is not positive
+   */
+  private void validatePositive(float value, String name) {
+    if (value <= 0) {
+      throw new IllegalArgumentException(name + " must be positive: " + value);
+    }
+  }
+
+  /**
+   * Creates a physics body definition
+   *
+   * @param x        X position
+   * @param y        Y position
+   * @param bodyType Type of physics body
+   * @return The body definition
+   */
+  private BodyDef createBodyDef(float x, float y, BodyType bodyType) {
+    BodyDef bodyDef = new BodyDef();
+    bodyDef.type = bodyType;
+    bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+    return bodyDef;
+  }
+
+  /**
    * Creates a static ground platform in world coordinates
+   *
+   * @param x      X position
+   * @param y      Y position
+   * @param width  Width of the ground
+   * @param height Height of the ground
+   * @param color  Color of the ground
+   * @return The created entity
+   * @throws IllegalArgumentException if width or height is not positive
    */
   public Entity createGround(float x, float y, float width, float height, Color color) {
+    validatePositive(width, "Width");
+    validatePositive(height, "Height");
+
     // Create physics body definition
-    BodyDef groundBodyDef = new BodyDef();
-    groundBodyDef.type = BodyType.STATIC;
-    groundBodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+    BodyDef groundBodyDef = createBodyDef(x, y, BodyType.STATIC);
     groundBodyDef.fixedRotation = true;
 
     // Physics shape
@@ -99,20 +155,30 @@ public class EntityFactory {
         new RenderableComponent(groundRect),
         new PhysicsBodyComponent(groundBodyDef, groundShape, 0, 0.3f, 0.2f));
 
-    System.out.println("Created ground at: " + x + "," + y + " with size: " + width + "x" + height);
-    registerWithRegistrar(entity).toString();
-    return entity;
+    LOGGER.fine("Created ground at: " + x + "," + y + " with size: " + width + "x" + height);
+    return registerWithRegistrar(entity);
   }
 
   /**
    * Creates a dynamic ball in world coordinates
+   *
+   * @param x           X position
+   * @param y           Y position
+   * @param radius      Radius of the ball
+   * @param color       Color of the ball
+   * @param density     Physics density
+   * @param friction    Physics friction
+   * @param restitution Physics restitution (bounciness)
+   * @return The created entity
+   * @throws IllegalArgumentException if radius is not positive
    */
-  public String createBall(float x, float y, float radius, Color color,
+  public Entity createBall(float x, float y, float radius, Color color,
       float density, float friction, float restitution) {
+    validatePositive(radius, "Radius");
+    validatePositive(density, "Density");
+
     // Physics body definition
-    BodyDef ballBodyDef = new BodyDef();
-    ballBodyDef.type = BodyType.DYNAMIC;
-    ballBodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+    BodyDef ballBodyDef = createBodyDef(x, y, BodyType.DYNAMIC);
     ballBodyDef.angularDamping = 0.8f;
     ballBodyDef.linearDamping = 0.1f;
 
@@ -135,16 +201,32 @@ public class EntityFactory {
         new RenderableComponent(ballCircle),
         new PhysicsBodyComponent(ballBodyDef, ballShape, density, friction, restitution));
 
-    System.out.println("Created ball at: " + x + "," + y + " with radius: " + radius);
-    return registerWithRegistrar(entity).toString();
+    LOGGER.fine("Created ball at: " + x + "," + y + " with radius: " + radius);
+    return registerWithRegistrar(entity);
   }
 
-  public String createRect(float x, float y, float width, float height, Color color,
+  /**
+   * Creates a rectangular entity with physics
+   *
+   * @param x           X position
+   * @param y           Y position
+   * @param width       Width of the rectangle
+   * @param height      Height of the rectangle
+   * @param color       Color of the rectangle
+   * @param density     Physics density
+   * @param friction    Physics friction
+   * @param restitution Physics restitution (bounciness)
+   * @return The created entity
+   * @throws IllegalArgumentException if width or height is not positive
+   */
+  public Entity createRect(float x, float y, float width, float height, Color color,
       float density, float friction, float restitution) {
+    validatePositive(width, "Width");
+    validatePositive(height, "Height");
+    validatePositive(density, "Density");
+
     // Physics body definition
-    BodyDef bodyDef = new BodyDef();
-    bodyDef.type = BodyType.DYNAMIC;
-    bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+    BodyDef bodyDef = createBodyDef(x, y, BodyType.DYNAMIC);
 
     // Physics shape
     PolygonShape shape = new PolygonShape();
@@ -165,8 +247,8 @@ public class EntityFactory {
         new RenderableComponent(rectangle),
         new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
 
-    System.out.println("Created rectangle at: " + x + "," + y + " with size: " + width + "x" + height);
-    return registerWithRegistrar(entity).toString();
+    LOGGER.fine("Created rectangle at: " + x + "," + y + " with size: " + width + "x" + height);
+    return registerWithRegistrar(entity);
   }
 
   /**
@@ -205,15 +287,19 @@ public class EntityFactory {
    * @param density     Physics density
    * @param friction    Physics friction
    * @param restitution Physics restitution (bounciness)
-   * @return Entity ID
+   * @return The created entity
+   * @throws IllegalArgumentException if width or height is not positive
    */
-  public String createPhysicsGameObject(float x, float y, float width, float height,
-      GameObject gameObject, BodyType bodyType,
-      float density, float friction, float restitution) {
+  public Entity createPhysicsGameObject(float x, float y, float width, float height,
+      GameObject gameObject, BodyType bodyType, float density, float friction, float restitution) {
+    validatePositive(width, "Width");
+    validatePositive(height, "Height");
+    if (gameObject == null) {
+      throw new IllegalArgumentException("GameObject cannot be null");
+    }
+
     // Physics body definition
-    BodyDef bodyDef = new BodyDef();
-    bodyDef.type = bodyType;
-    bodyDef.position = physicsWorld.toPhysicsWorld(x, y);
+    BodyDef bodyDef = createBodyDef(x, y, bodyType);
 
     // Physics shape
     PolygonShape shape = new PolygonShape();
@@ -231,8 +317,8 @@ public class EntityFactory {
         new GameObjectComponent(gameObject),
         new PhysicsBodyComponent(bodyDef, shape, density, friction, restitution));
 
-    System.out.println("Created physics GameObject at: " + x + "," + y);
-    return registerWithRegistrar(entity).toString();
+    LOGGER.fine("Created physics GameObject at: " + x + "," + y);
+    return registerWithRegistrar(entity);
   }
 
   /**
@@ -506,22 +592,51 @@ public class EntityFactory {
 
   /**
    * Creates a static box entity
+   *
+   * @param x      X position
+   * @param y      Y position
+   * @param width  Width of the box
+   * @param height Height of the box
+   * @param color  Color of the box
+   * @return The created entity
    */
-  public Entity createStaticBox(float x, float y, float width, float height,Color color) {
-    return createBox(x, y, width, height, RigidBody.Type.STATIC,color);
+  public Entity createStaticBox(float x, float y, float width, float height, Color color) {
+    return createBox(x, y, width, height, RigidBody.Type.STATIC, color);
   }
 
   /**
    * Creates a dynamic box entity
+   *
+   * @param x      X position
+   * @param y      Y position
+   * @param width  Width of the box
+   * @param height Height of the box
+   * @param color  Color of the box
+   * @return The created entity
    */
-  public Entity createDynamicBox(float x, float y, float width, float height,Color color) {
-    return createBox(x, y, width, height, RigidBody.Type.DYNAMIC,color);
+  public Entity createDynamicBox(float x, float y, float width, float height, Color color) {
+    return createBox(x, y, width, height, RigidBody.Type.DYNAMIC, color);
   }
 
   /**
    * Creates a box entity with the specified rigid body type
+   *
+   * @param x        X position
+   * @param y        Y position
+   * @param width    Width of the box
+   * @param height   Height of the box
+   * @param bodyType Type of physics body
+   * @param color    Color of the box
+   * @return The created entity
+   * @throws IllegalArgumentException if width or height is not positive
    */
-  public Entity createBox(float x, float y, float width, float height, RigidBody.Type bodyType,Color color) {
+  public Entity createBox(float x, float y, float width, float height, RigidBody.Type bodyType, Color color) {
+    validatePositive(width, "Width");
+    validatePositive(height, "Height");
+    if (color == null) {
+      throw new IllegalArgumentException("Color cannot be null");
+    }
+
     // Create box collider
     BoxCollider boxCollider = new BoxCollider(width, height);
 
@@ -534,7 +649,7 @@ public class EntityFactory {
     Entity entity = ecs.createEntity(
         "box_" + System.currentTimeMillis(),
         new Transform(x, y, 0, 1, 1),
-        new RenderableComponent(new Rect(color,width, height)),
+        new RenderableComponent(new Rect(color, width, height)),
         boxCollider,
         new PhysicsBodyComponent(
             bodyDef,
@@ -543,27 +658,40 @@ public class EntityFactory {
             0.3f,
             0.2f));
 
-    return entity;
+    return registerWithRegistrar(entity);
   }
 
   /**
    * Creates a static circle entity
    */
-  public Entity createStaticCircle(float x, float y, float radius,Color color) {
-    return createCircle(x, y, radius, RigidBody.Type.STATIC,color);
+  public Entity createStaticCircle(float x, float y, float radius, Color color) {
+    return createCircle(x, y, radius, RigidBody.Type.STATIC, color);
   }
 
   /**
    * Creates a dynamic circle entity
    */
-  public Entity createDynamicCircle(float x, float y, float radius,Color color) {
-    return createCircle(x, y, radius, RigidBody.Type.DYNAMIC,color);
+  public Entity createDynamicCircle(float x, float y, float radius, Color color) {
+    return createCircle(x, y, radius, RigidBody.Type.DYNAMIC, color);
   }
 
   /**
    * Creates a circle entity with the specified rigid body type
+   *
+   * @param x        X position
+   * @param y        Y position
+   * @param radius   Radius of the circle
+   * @param bodyType Type of physics body
+   * @param color    Color of the circle
+   * @return The created entity
+   * @throws IllegalArgumentException if radius is not positive
    */
-  public Entity createCircle(float x, float y, float radius, RigidBody.Type bodyType,Color color) {
+  public Entity createCircle(float x, float y, float radius, RigidBody.Type bodyType, Color color) {
+    validatePositive(radius, "Radius");
+    if (color == null) {
+      throw new IllegalArgumentException("Color cannot be null");
+    }
+
     // Create circle collider
     CircleCollider circleCollider = new CircleCollider(radius);
 
@@ -576,7 +704,7 @@ public class EntityFactory {
     Entity entity = ecs.createEntity(
         "circle_" + System.currentTimeMillis(),
         new Transform(x, y, 0, 1, 1),
-        new RenderableComponent(new Circle(color,radius)),
+        new RenderableComponent(new Circle(color, radius)),
         circleCollider,
         new PhysicsBodyComponent(
             bodyDef,
@@ -585,13 +713,25 @@ public class EntityFactory {
             0.3f,
             0.2f));
 
-    return entity;
+    return registerWithRegistrar(entity);
   }
 
   /**
    * Creates a polygon entity with the specified vertices and rigid body type
+   *
+   * @param x        X position
+   * @param y        Y position
+   * @param vertices Array of vertices defining the polygon shape
+   * @param bodyType Type of physics body
+   * @return The created entity
+   * @throws IllegalArgumentException if vertices array is null or has less than 3
+   *                                  points
    */
   public Entity createPolygon(float x, float y, Vec2[] vertices, RigidBody.Type bodyType) {
+    if (vertices == null || vertices.length < 3) {
+      throw new IllegalArgumentException("Polygon must have at least 3 vertices");
+    }
+
     // Convert vertices to physics world coordinates
     Vec2[] scaledVertices = new Vec2[vertices.length];
     for (int i = 0; i < vertices.length; i++) {
@@ -619,7 +759,7 @@ public class EntityFactory {
             0.3f,
             0.2f));
 
-    return entity;
+    return registerWithRegistrar(entity);
   }
 
   /**
@@ -670,5 +810,40 @@ public class EntityFactory {
       physics.setCollisionCategory(category);
       physics.setCollisionMask(mask);
     }
+  }
+
+  /**
+   * Creates a basic entity with only a transform component
+   *
+   * @param x X coordinate in world space
+   * @param y Y coordinate in world space
+   * @return The created entity
+   */
+  public Entity createBasicEntity(float x, float y) {
+    return createBasicEntity(x, y, 0, 1, 1);
+  }
+
+  /**
+   * Creates a basic entity with only a transform component and specified rotation
+   * and scale
+   *
+   * @param x        X coordinate in world space
+   * @param y        Y coordinate in world space
+   * @param rotation Rotation in radians
+   * @param scaleX   X scale factor
+   * @param scaleY   Y scale factor
+   * @return The created entity
+   */
+  public Entity createBasicEntity(float x, float y, float rotation, float scaleX, float scaleY) {
+    // Create transform with world coordinates
+    Transform transform = new Transform(x, y, rotation, scaleX, scaleY);
+
+    // Create entity with random ID
+    String entityId = "entity-" + Math.round(Math.random() * 10000);
+
+    Entity entity = ecs.createEntity(entityId, transform);
+
+    LOGGER.fine("Created basic entity at: " + x + "," + y);
+    return registerWithRegistrar(entity);
   }
 }
